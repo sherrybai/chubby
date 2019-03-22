@@ -67,11 +67,11 @@ func (app *App) Run() {
 		select {
 		default:
 			// Accept new client connection.
-			conn, err := app.listener.Accept()
-			if err != nil {
-				fmt.Println(err.Error())
-				continue
-			}
+			//conn, err := app.listener.Accept()
+			//if err != nil {
+			//	fmt.Println(err.Error())
+			//	continue
+			//}
 			// Handle connection.
 			// ClientHandler(conn, app)
 		}

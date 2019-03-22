@@ -11,21 +11,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package chubby
+package main
 
 import (
 	"cos518project/chubby/config"
 	"cos518project/chubby/server"
 	"flag"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 var (
-	listen		string
-	raftDir 	string
-	raftBind 	string
-	nodeId		string
-	join		string
-	inmem		bool
+	listen		string		// Server listen port.
+	raftDir 	string		// Raft data directory.
+	raftBind 	string		// Raft bus transport bind port.
+	nodeId		string		// Node ID.
+	join		string		// Address of existing cluster at which to join.
+	inmem		bool		// If true, keep log and stable storage in memory.
 )
 
 func init() {
@@ -51,6 +54,12 @@ func main() {
 	// Create new app.
 	app := server.NewApp(c)
 
+	quitCh := make(chan os.Signal, 1)
+	signal.Notify(quitCh, os.Kill, os.Interrupt, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+
 	// Run the app.
 	go app.Run()
+
+	// Exit on signal.
+	<-quitCh
 }
