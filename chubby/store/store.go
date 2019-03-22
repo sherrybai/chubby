@@ -1,8 +1,8 @@
-package chubby
-
-// Raft-backed distributed key-value store. Adapted from hraftd (Hashicorp
-// Raft reference example):
+// Raft-backed distributed key-value store.
+// Adapted from hraftd (Hashicorp Raft reference example):
 // https://github.com/otoolep/hraftd/blob/master/store/store.go
+
+package store
 
 import (
 	"encoding/json"
@@ -45,11 +45,13 @@ type Store struct {
 }
 
 // Returns a new store.
-func New(inmem bool) *Store {
+func New(raftDir string, raftBind string, inmem bool) *Store {
 	return &Store{
-		m:		make(map[string]string),
-		inmem:	inmem,
-		logger: log.New(os.Stderr, "[store] ",  log.LstdFlags),
+		RaftDir: 	raftDir,
+		RaftBind: 	raftBind,
+		m:			make(map[string]string),
+		inmem:		inmem,
+		logger: 	log.New(os.Stderr, "[store] ",  log.LstdFlags),
 	}
 }
 

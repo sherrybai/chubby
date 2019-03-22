@@ -1,31 +1,20 @@
-package chubby
-
 // Provide distributed consensus services.
 // Some code adapted from freno:
 // https://github.com/github/freno/blob/master/go/group/raft.go
+// TODO: get rid of this file -- doesn't really do anything right now
+
+package chubby
 
 import (
-	"fmt"
 	"github.com/hashicorp/raft"
+	"cos518project/chubby/store"
 )
 
-var store *Store
-
-func Setup(inmem bool) (*Store, error) {
-	store = New(inmem)
-
-	if err := store.Open(); err != nil {
-		return nil, fmt.Errorf(
-			"failed to open Raft store: %s",
-			err.Error())
-	}
-
-	return store, nil
-}
+var s *store.Store
 
 // Private method for retrieving Raft instance
 func getRaft() *raft.Raft {
-	return store.raft
+	return s.raft
 }
 
 // Returns if this node is the current Raft leader

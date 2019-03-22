@@ -1,14 +1,17 @@
+// TODO: Get rid of this file -- doesn't really do anything right now
+
 package chubby
 
-import (
-	"cos518project/raft"
-)
-
 type API interface {
-	RaftLeader() raft.ServerAddress
+	RaftLeader() string
 }
 
 type APIImpl struct {
+
+}
+
+// Return the address of the current Chubby leader.
+func (APIImpl) RaftLeader() string {
 
 }
 
