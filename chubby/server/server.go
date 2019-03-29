@@ -48,7 +48,8 @@ func NewApp(conf *config.Config) *App {
 	err = app.store.Open(bootstrap, conf.NodeID)
 
 	if !bootstrap {
-		// TODO: figure out how to join nodes to existing clusters
+		// Join node to existing cluster.
+		app.store.Join(conf.NodeID, conf.Join)
 	}
 
 	// Listen for client connections.

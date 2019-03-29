@@ -1,4 +1,4 @@
 all: build
 
 build:
-	go build -o chubby main.go
+	go build -o main cmd/*.go
