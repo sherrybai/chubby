@@ -21,8 +21,11 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/rpc"
 	"os"
 )
+
+var app *App
 
 type App struct {
 	listener net.Listener
@@ -33,9 +36,11 @@ type App struct {
 	logger *log.Logger
 }
 
-func NewApp(conf *config.Config) *App {
+func Run(conf *config.Config) {
 	var err error
-	app := &App{}
+
+	// Init app struct.
+	app = &App{}
 
 	// Create a new logger.
 	app.logger = log.New(os.Stderr, "[server] ", log.LstdFlags)
@@ -48,8 +53,19 @@ func NewApp(conf *config.Config) *App {
 	err = app.store.Open(bootstrap, conf.NodeID)
 
 	if !bootstrap {
-		// Join node to existing cluster.
-		app.store.Join(conf.NodeID, conf.Join)
+		// Set up TCP connection.
+		client, err := rpc.Dial("tcp", conf.Join)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var req JoinRequest
+		var resp EmptyResponse
+
+		req.raftAddr = conf.Listen
+		req.nodeID = conf.NodeID
+
+		client.Call("Handler.Join", req, &resp)
 	}
 
 	// Listen for client connections.
@@ -59,22 +75,6 @@ func NewApp(conf *config.Config) *App {
 		fmt.Println(err.Error())
 	}
 
-	return app
-}
-
-func (app *App) Run() {
 	// Accept connections.
-	for {
-		select {
-		default:
-			//Accept new client connection.
-			conn, err := app.listener.Accept()
-			if err != nil {
-				fmt.Println(err.Error())
-				continue
-			}
-			//Handle connection.
-			ClientHandler(conn, app)
-		}
-	}
+	rpc.Accept(app.listener)
 }
