@@ -83,13 +83,71 @@ func (c *Client) connHandler() {
 	}
 }
 
+func (c *Client) Resp(resp string) error {
+	var err error = nil
+
+	err = c.rWriter.WriteString(resp)
+	return err
+}
+
+
+func (c *Client) FlushResp(resp string) error {
+	err := c.Resp(resp)
+	if err != nil {
+		return err
+	}
+	return c.rWriter.Flush()
+}
+
+
 function (c *Client) handleRequest(req string) error {
 	if len(req) == 0 {
 		c.cmd = ""
 		c.args = nil
 	} else {
-		c.cmd = strings.ToLower(string(req[0]))
-
+		c.cmd = strings.ToLower(string(req))
+		c.args = req
 	}
+
+	var (
+		err error
+		v string
+	)
+
+	c.logger.Printf("process %s command", c.cmd)
+
+	switch c.cmd {
+	case "acquire":
+		if v, err = c.handleAcquire(); err == nil {
+			c.FlushResp("OK")
+		} else {
+			c.FlushResp("Fail to acquire")
+		}
+	case "release":
+		if v, err = c.handleRelease(); err == nil {
+			c.FlushResp("OK")
+		} else {
+			c.FlushResp("Fail to release")
+		}
+	case "delete":
+		if v, err = c.handleDelete(); err == nil {
+			c.FlushResp("OK")
+		} else {
+			c.FlushResp("Fail to delete")
+		}
+	case "create":
+		if v, err = c.handleCreate(); err == nil {
+			c.FlushResp("OK")
+		} else {
+			c.FlushResp("Fail to create")
+		}
+	default:
+		err = ErrCmdNotSupport
+	}
+	if err != nil {
+		c.FlushResp(err)
+	}
+
+	return err
 }
 
