@@ -17,7 +17,6 @@ import (
 	"cos518project/chubby/config"
 	"cos518project/chubby/server"
 	"flag"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -51,7 +50,7 @@ func main() {
 
 	// Create new Chubby config.
 	c = config.NewConfig(listen, raftDir, raftBind, nodeId, join, inmem)
-	fmt.Println(c)
+	//fmt.Println(c)
 
 	quitCh := make(chan os.Signal, 1)
 	signal.Notify(quitCh, os.Kill, os.Interrupt, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)

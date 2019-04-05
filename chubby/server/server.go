@@ -59,16 +59,24 @@ func Run(conf *config.Config) {
 			log.Fatal(err)
 		}
 
+		app.logger.Printf("set up connection to %s", conf.Join)
+
 		var req JoinRequest
 		var resp EmptyResponse
 
-		req.raftAddr = conf.Listen
-		req.nodeID = conf.NodeID
+		req.RaftAddr = conf.Listen
+		req.NodeID = conf.NodeID
 
-		client.Call("Handler.Join", req, &resp)
+		err = client.Call("Handler.Join", req, &resp)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// Listen for client connections.
+	handler := new(Handler)
+	err = rpc.Register(handler)
+
 	app.listener, err = net.Listen("tcp", conf.Listen)
 	app.logger.Printf("server listen in %s", conf.Listen)
 	if err != nil {

@@ -9,8 +9,8 @@ var (
 )
 
 type JoinRequest struct {
-	raftAddr string
-	nodeID string
+	RaftAddr string
+	NodeID string
 }
 
 type EmptyResponse struct {}
@@ -20,7 +20,7 @@ type Handler int
 
 // Join the caller server to our server.
 func (h *Handler) Join(req JoinRequest, res *EmptyResponse) error {
-	return app.store.Join(req.nodeID, req.raftAddr)
+	return app.store.Join(req.NodeID, req.RaftAddr)
 }
 
 //
