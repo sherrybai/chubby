@@ -25,6 +25,7 @@ import (
 	"os"
 )
 
+// No choice but to make this variable package-level :(
 var app *App
 
 type App struct {
@@ -62,6 +63,9 @@ func Run(conf *config.Config) {
 	// Open the store.
 	bootstrap := conf.Join == ""
 	err = app.store.Open(bootstrap, conf.NodeID)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if !bootstrap {
 		// Set up TCP connection.
@@ -75,7 +79,7 @@ func Run(conf *config.Config) {
 		var req JoinRequest
 		var resp EmptyResponse
 
-		req.RaftAddr = conf.Listen
+		req.RaftAddr = conf.RaftBind
 		req.NodeID = conf.NodeID
 
 		err = client.Call("Handler.Join", req, &resp)
