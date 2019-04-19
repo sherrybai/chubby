@@ -13,6 +13,15 @@ type JoinRequest struct {
 	NodeID string
 }
 
+type CreateLockRequest struct {
+	name LockName
+	path LockPath
+}
+
+type CreastLockResponse struct {
+	isSuccessful bool
+}
+
 type EmptyResponse struct {}
 
 // RPC handler type
