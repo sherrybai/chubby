@@ -35,6 +35,14 @@ type App struct {
 	store *store.Store
 
 	logger *log.Logger
+
+}
+
+type Lock struct {
+	path string
+	exclusive_owner string
+	shared_owners []string
+	value string
 }
 
 func Run(conf *config.Config) {
@@ -48,6 +56,9 @@ func Run(conf *config.Config) {
 
 	// Create a new store.
 	app.store = store.New(conf.RaftDir, conf.RaftBind, conf.InMem)
+
+	// Initialize a map
+	app.file_handlers = make(map[int]string)
 
 	// Open the store.
 	bootstrap := conf.Join == ""
