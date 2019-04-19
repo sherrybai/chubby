@@ -37,7 +37,7 @@ func (h *Handler) Join(req JoinRequest, res *EmptyResponse) error {
 	return app.store.Join(req.NodeID, req.RaftAddr)
 }
 
-func (h *Handler) Create(req CreateRequest, res *clientResponse) error
+func (h *Handler) Create(req clientRequest, res *clientResponse) error
 
 func (h *Handler) Delete(req clientRequest, res *clientResponse) error
 

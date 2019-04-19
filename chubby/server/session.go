@@ -1,18 +1,13 @@
-package session
+package server
 
 import (
-    "net"
-    "time"
-    "fmt"
-    "errors"
-    "bufio"
     "github.com/hashicorp/raft"
-    "github.com/hashicorp/go-msgpack/codec"
+    "net"
 )
 
 
 type Session struct {
     trans               *raft.NetworkTransport
     currConn            *net.Conn
-    raftServer         ServerAddress
+    raftServer          raft.ServerAddress
 }

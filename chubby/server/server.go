@@ -36,6 +36,7 @@ type App struct {
 
 	logger *log.Logger
 
+	fileHandlers map[int]string
 }
 
 type Lock struct {
@@ -58,7 +59,7 @@ func Run(conf *config.Config) {
 	app.store = store.New(conf.RaftDir, conf.RaftBind, conf.InMem)
 
 	// Initialize a map
-	app.file_handlers = make(map[int]string)
+	app.fileHandlers = make(map[int]string)
 
 	// Open the store.
 	bootstrap := conf.Join == ""

@@ -1,16 +1,9 @@
 package server
 
 import (
-	"bufio"
-	"bytes"
-	"errors"
-	"io"
 	"log"
-	"net/rpc"
-	"os"
-	"strings"
 	"github.com/hashicorp/raft"
-	"github.com/hashicorp/raft-boltdb"
+	"net/rpc"
 )
 
 type LockName string
@@ -23,43 +16,44 @@ type LockClient struct {
     /* Location of master server. */
     masterServer   raft.ServerAddress
     /* Location of locks. */
-    locks           map[string]string
+    locks           map[LockName]LockPath
     /* Session */
-    session 		*session.Session
+    session 		*Session
 }
 
 /* Create lock client. */
 func CreateLockClient(trans *raft.NetworkTransport, masterServer raft.ServerAddress) (*LockClient, error) {
     lc := &LockClient {
         trans:          trans,
-        masterServers:  masterServer,
+        masterServer:   masterServer,
         locks:          make(map[LockName]LockPath),
     }
     return lc, nil
 }
 
-func CreateLock(lc *LockClient) CreateLock(name LockName, path LockPath) (error) {
-	client, err: = rpc.Dial("tcp", lc.masterServer)
+func CreateLock(lc *LockClient, name LockName, path LockPath) error {
+	// Set up TCP connection
+	client, err := rpc.Dial("tcp", string(lc.masterServer))
 	checkError(err)
-	args :=  CreastLockRequest{name, path}
+	args :=  CreateLockRequest{name: name, path: path}
 	response := clientResponse{false}
-	err = client.call("Handler.Create", args, &response)
+	err = client.Call("Handler.Create", args, &response)
 	if err != nil {
 		return err
 	}
-	return nul
+	return nil
 }
 
-func DeleteLock(lc *LockClient) CreateLock(name LockName, path LockPath) (error) {
-	client, err: = rpc.Dial("tcp", lc.masterServer)
+func DeleteLock(lc *LockClient, name LockName, path LockPath) error {
+	client, err := rpc.Dial("tcp", string(lc.masterServer))
 	checkError(err)
-	args :=  CreastLockRequest{name, path}
-	response := CreastLockResponse{false}
-	err = client.call("Handler.Create", args, &response)
+	args :=  CreateLockRequest{name: name, path: path}
+	response := clientResponse{false}
+	err = client.Call("Handler.Create", args, &response)
 	if err != nil {
 		return err
 	}
-	return nul
+	return nil
 }
 
 func checkError(err error) {
