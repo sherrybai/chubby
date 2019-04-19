@@ -18,7 +18,11 @@ type CreateLockRequest struct {
 	path LockPath
 }
 
-type CreastLockResponse struct {
+type clientRequest struct {
+	path LockPath
+}
+
+type clientResponse struct {
 	isSuccessful bool
 }
 
@@ -33,13 +37,13 @@ func (h *Handler) Join(req JoinRequest, res *EmptyResponse) error {
 	return app.store.Join(req.NodeID, req.RaftAddr)
 }
 
-func (h *Handler) Create(req CreateRequest, res *EmptyResponse) error
+func (h *Handler) Create(req CreateRequest, res *clientResponse) error
 
-func (h *Handler) Delete(req CreateRequest, res *EmptyResponse) error
+func (h *Handler) Delete(req clientRequest, res *clientResponse) error
 
-func (h *Handler) Acquire(req AcquireRequest, res *EmptyResponse) error
+func (h *Handler) Acquire(req clientRequest, res *clientResponse) error
 
-func (h *Handler) Release(req ReleaseRequest, res *EmptyResponse) error
+func (h *Handler) Release(req clientRequest, res *clientResponse) error
 // Open the file handler
 func (h *Handler) Open() error {
 	return 

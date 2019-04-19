@@ -42,6 +42,18 @@ func CreateLock(lc *LockClient) CreateLock(name LockName, path LockPath) (error)
 	client, err: = rpc.Dial("tcp", lc.masterServer)
 	checkError(err)
 	args :=  CreastLockRequest{name, path}
+	response := clientResponse{false}
+	err = client.call("Handler.Create", args, &response)
+	if err != nil {
+		return err
+	}
+	return nul
+}
+
+func DeleteLock(lc *LockClient) CreateLock(name LockName, path LockPath) (error) {
+	client, err: = rpc.Dial("tcp", lc.masterServer)
+	checkError(err)
+	args :=  CreastLockRequest{name, path}
 	response := CreastLockResponse{false}
 	err = client.call("Handler.Create", args, &response)
 	if err != nil {
