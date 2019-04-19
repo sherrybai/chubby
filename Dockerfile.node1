@@ -1,0 +1,14 @@
+FROM golang:1.12
+
+WORKDIR $GOPATH/src/cos518project/
+COPY . .
+
+# Dependencies
+RUN go get -d -v ./...
+
+# Build executable
+RUN go build -o bin/chubby chubby/cmd/*.go
+
+# Run chubby exec
+# Default ports: listen on :5379, raftbind :15379
+CMD ["bin/chubby", "-id", "node1"]

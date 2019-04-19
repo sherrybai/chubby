@@ -1,0 +1,35 @@
+version: '3'
+services:
+    node1:
+        build:
+            context: .
+            dockerfile: Dockerfile.node1
+        network_mode: host
+    node2:
+        build:
+            context: .
+            dockerfile: Dockerfile.node2
+        network_mode: host
+        depends_on:
+            - "node1"
+    node3:
+        build:
+            context: .
+            dockerfile: Dockerfile.node3
+        network_mode: host
+        depends_on:
+            - "node1"
+    node4:
+        build:
+            context: .
+            dockerfile: Dockerfile.node4
+        network_mode: host
+        depends_on:
+            - "node1"
+    node5:
+        build:
+            context: .
+            dockerfile: Dockerfile.node5
+        network_mode: host
+        depends_on:
+            - "node1"
