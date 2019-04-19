@@ -26,6 +26,11 @@ type clientResponse struct {
 	isSuccessful bool
 }
 
+type acquireLockResponse struct {
+	isSuccessful bool
+	name LockName
+}
+
 type EmptyResponse struct {}
 
 // RPC handler type

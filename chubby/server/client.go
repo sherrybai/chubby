@@ -23,7 +23,7 @@ type LockClient struct {
     /* Location of master server. */
     masterServer   raft.ServerAddress
     /* Location of locks. */
-    locks           map[string]string
+    locks           map[LockPath]LockName
     /* Session */
     session 		*session.Session
 }
@@ -38,7 +38,7 @@ func CreateLockClient(trans *raft.NetworkTransport, masterServer raft.ServerAddr
     return lc, nil
 }
 
-func CreateLock(lc *LockClient) CreateLock(name LockName, path LockPath) (error) {
+func (lc *LockClient) CreateLock(name LockName, path LockPath) (error) {
 	client, err: = rpc.Dial("tcp", lc.masterServer)
 	checkError(err)
 	args :=  CreastLockRequest{name, path}
@@ -47,19 +47,34 @@ func CreateLock(lc *LockClient) CreateLock(name LockName, path LockPath) (error)
 	if err != nil {
 		return err
 	}
-	return nul
+	return nil
 }
 
-func DeleteLock(lc *LockClient) CreateLock(name LockName, path LockPath) (error) {
+func (lc *LockClient) DeleteLock (path LockPath) (error) {
 	client, err: = rpc.Dial("tcp", lc.masterServer)
 	checkError(err)
-	args :=  CreastLockRequest{name, path}
-	response := CreastLockResponse{false}
-	err = client.call("Handler.Create", args, &response)
+	args :=  clientRequest{path}
+	response := clientResponse{false}
+	err = client.call("Handler.Delete", args, &response)
 	if err != nil {
 		return err
 	}
-	return nul
+	return nil
+}
+
+func (lc *LockClient) AcquireLock (path LockPath) (error) {
+	client, err: = rpc.Dial("tcp", lc.masterServer)
+	checkError(err)
+	args :=  clientRequest{path}
+	response := acquireLockResponse{false, ""}
+	err = client.call("Handler.Acquire", args, &response)
+	if err != nil {
+		return err
+	}
+	if response.isSuccessful == true {
+		lc.loc
+	}
+	return nil
 }
 
 func checkError(err error) {
