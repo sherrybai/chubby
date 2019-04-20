@@ -99,7 +99,7 @@ func (lc *LockClient) Try_AcquireLock (path FilePath, mode LockMode) (error) {
 		lock.owners = map[string]bool {
 			lc.sessionID: true,
 		}
-		err = app.store.Set(path, json.Marshal(&lock))
+		err = app.store.Set(path, string(json.Marshal(&lock)))
 		/* More for debugging purpose, might need to do something else late for this error*/
 		if err != nil {
 			return errors.New(fmt.Sprintf("Fail to Commit in Store"))
@@ -111,7 +111,7 @@ func (lc *LockClient) Try_AcquireLock (path FilePath, mode LockMode) (error) {
 		}
 		lock.mode = mode
 		lock.owners[lc.sessionID] = true
-		err = app.store.Set(path, json.Marshal(&lock))
+		err = app.store.Set(path, string(json.Marshal(&lock)))
 		if err != nil {
 			return errors.New(fmt.Sprintf("Fail to Commit in Store"))
 		}
@@ -137,7 +137,7 @@ func (lc *LockClient) ReleaseLock (path FilePath) (error) {
 		lock.mode = FREE
 		lc.locks[path] = false
 		delete(lock.owners, lc.sessionID)
-		err = app.store.Set(path, json.Marshal(&lock))
+		err = app.store.Set(path, string(json.Marshal(&lock)))
 		if err != nil {
 			return errors.New(fmt.Sprintf("Fail to commit"))
 		}
@@ -146,14 +146,14 @@ func (lc *LockClient) ReleaseLock (path FilePath) (error) {
 			lock.mode = FREE
 			lc.locks[path] = false
 			delete(lock.owners, lc.sessionID)
-			err = app.store.Set(path, json.Marshal(&lock))
+			err = app.store.Set(path, string(json.Marshal(&lock)))
 			if err != nil {
 				return errors.New(fmt.Sprintf("Fail to commit"))
 			}
 		} else {
 			lc.locks[path] = false
 			delete(lock.owners, lc.sessionID)
-			err = app.store.Set(path, json.Marshal(&lock))
+			err = app.store.Set(path, string(json.Marshal(&lock)))
 			if err != nil {
 				return errors.New(fmt.Sprintf("Fail to commit"))
 			}
