@@ -39,13 +39,6 @@ type App struct {
 	fileHandlers map[int]string
 }
 
-type Lock struct {
-	path string
-	exclusive_owner string
-	shared_owners []string
-	value string
-}
-
 func Run(conf *config.Config) {
 	var err error
 
