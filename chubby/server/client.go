@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"fmt"
+	"encoding/json"
 )
 
 type SessionID 	string
@@ -11,8 +12,9 @@ type FilePath 	string
 // Mode of a lock
 type LockMode	int
 const (
-	EXCLUSIVE LockMode = iota
-	SHARED
+	EXCLUSIVE LockMode = 1
+	SHARED LockMode = 2
+	FREE LockMode = 3
 )
 
 // LockClient describes the locks held by a particular client in a particular Chubby session.
@@ -74,8 +76,88 @@ func (lc *LockClient) DeleteLock (path FilePath) error {
 	return err
 }
 
-func (lc *LockClient) AcquireLock (path FilePath) error {
-
+func (lc *LockClient) Try_AcquireLock (path FilePath, mode LockMode) (error) {
+	if mode != EXCLUSIVE && mode != SHARED {
+		return errors.New(fmt.Sprintf("Invalid mode."))
+	}
+	lock_info, err := app.store.Get(path) 
+	if err != nil {
+		return errors.New(fmt.Sprintf("Lock at path %s doesn't exist", path))
+	}
+	lock_info_bytes = []byte(lock_info)
+	var lock Lock
+	err = json.Unmarshal(lock_info_bytes, &lock)
+	if err != nil {
+		return errors.New(fmt.Sprintf("Fail to Decode"))
+	}
+	if mode == EXCLUSIVE {
+		if lock.mode != FREE {
+			return errors.New(fmt.Sprintf("Lock is not free"))
+		}
+		lock.path = path
+		lock.mode = mode
+		lock.owners = map[string]bool {
+			lc.sessionID: true,
+		}
+		err = app.store.Set(path, json.Marshal(&lock))
+		/* More for debugging purpose, might need to do something else late for this error*/
+		if err != nil {
+			return errors.New(fmt.Sprintf("Fail to Commit in Store"))
+		}
+		lc.locks[path] = lock
+	} else {
+		if lock.mode == EXCLUSIVE {
+			return errors.New(fmt.Sprintf("The lock is being held in exclusive mode."))
+		}
+		lock.mode = mode
+		lock.owners[lc.sessionID] = true
+		err = app.store.Set(path, json.Marshal(&lock))
+		if err != nil {
+			return errors.New(fmt.Sprintf("Fail to Commit in Store"))
+		}
+		lc.locks[path] = lock
+	}
+	return nil
 }
 
-
+func (lc *LockClient) ReleaseLock (path FilePath) (error) {
+	lock_info, err := app.store.Get(path) 
+	if err != nil {
+		return errors.New(fmt.Sprintf("Lock at path %s doesn't exist", path))
+	}
+	lock_info_bytes = []byte(lock_info)
+	var lock Lock
+	err = json.Unmarshal(lock_info_bytes, &lock)
+	if err != nil {
+		return errors.New(fmt.Sprintf("Fail to Decode"))
+	}
+	if lock.mode == FREE {
+		return nil
+	} else if lock.mode == EXCLUSIVE {
+		lock.mode = FREE
+		lc.locks[path] = false
+		delete(lock.owners, lc.sessionID)
+		err = app.store.Set(path, json.Marshal(&lock))
+		if err != nil {
+			return errors.New(fmt.Sprintf("Fail to commit"))
+		}
+	} else if lock.mode == SHARED {
+		if len(lock.owners) == 1 {
+			lock.mode = FREE
+			lc.locks[path] = false
+			delete(lock.owners, lc.sessionID)
+			err = app.store.Set(path, json.Marshal(&lock))
+			if err != nil {
+				return errors.New(fmt.Sprintf("Fail to commit"))
+			}
+		} else {
+			lc.locks[path] = false
+			delete(lock.owners, lc.sessionID)
+			err = app.store.Set(path, json.Marshal(&lock))
+			if err != nil {
+				return errors.New(fmt.Sprintf("Fail to commit"))
+			}
+		}
+	}
+	return nil
+}
