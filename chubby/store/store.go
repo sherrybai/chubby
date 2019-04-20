@@ -17,6 +17,7 @@ package store
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -132,7 +133,12 @@ func (s *Store) Open(enableSingle bool, localID string) error {
 func (s *Store) Get(key string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.m[key], nil
+
+	val, exists := s.m[key]
+	if !exists {
+		return "", errors.New(fmt.Sprintf("key %s does not exist", key))
+	}
+	return val, nil
 }
 
 // Set sets the value for the given key.

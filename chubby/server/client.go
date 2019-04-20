@@ -42,29 +42,39 @@ func CreateLockClient(sessionID SessionID) (*LockClient, error) {
 }
 
 func (lc *LockClient) CreateLock(path FilePath, mode LockMode) error {
-	// Add this lock to the LockClient's locks map
-	_, exists := lc.locks[path]
-	if !exists {
+	// Check if lock exists in persistent store
+	_, err := app.store.Get(string(path))
+	if err == nil {
 		return errors.New(fmt.Sprintf("Lock already exists at path %s", path))
-	}
 
-	lc.locks[path] = &Lock {
-		path:	path,
-		mode:	mode,
-		owners:	make(map[string]bool),
 	}
-
 	// Add lock to persistent store: (key: LockPath, value: "")
 	// TODO: What information should be in the lock file?
-	err := app.store.Set(string(path), "")
+	err = app.store.Set(string(path), "")
 	return err
 }
 
-func (lc *LockClient) DeleteLock (path FilePath) (error) {
+func (lc *LockClient) DeleteLock (path FilePath) error {
+	// If we are not holding the lock, we cannot delete it.
+	lock, exists := lc.locks[path]
+	if !exists {
+		return errors.New(fmt.Sprintf("Client does not hold the lock at path %s", path))
+	}
 
+	// Check if we are holding the lock in exclusive mode
+	if lock.mode != EXCLUSIVE {
+		return errors.New(fmt.Sprintf("Client does not hold the lock at path %s in exclusive mode", path))
+	}
+
+	// Delete the lock from LockClient metadata.
+	delete(lc.locks, path)
+
+	// Delete the lock from the store.
+	err := app.store.Delete(string(path))
+	return err
 }
 
-func (lc *LockClient) AcquireLock (path FilePath) (error) {
+func (lc *LockClient) AcquireLock (path FilePath) error {
 
 }
 
