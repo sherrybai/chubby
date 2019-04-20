@@ -84,7 +84,7 @@ func (lc *LockClient) Try_AcquireLock (path FilePath, mode LockMode) (error) {
 	if err != nil {
 		return errors.New(fmt.Sprintf("Lock at path %s doesn't exist", path))
 	}
-	lock_info_bytes = []byte(lock_info)
+	lock_info_bytes := []byte(lock_info)
 	var lock Lock
 	err = json.Unmarshal(lock_info_bytes, &lock)
 	if err != nil {
@@ -125,7 +125,7 @@ func (lc *LockClient) ReleaseLock (path FilePath) (error) {
 	if err != nil {
 		return errors.New(fmt.Sprintf("Lock at path %s doesn't exist", path))
 	}
-	lock_info_bytes = []byte(lock_info)
+	lock_info_bytes := []byte(lock_info)
 	var lock Lock
 	err = json.Unmarshal(lock_info_bytes, &lock)
 	if err != nil {
