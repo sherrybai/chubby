@@ -32,17 +32,6 @@ type Lock struct {
 	owners			map[ClientID]bool  // Who is holding the lock?
 }
 
-//// Server checks against this metadata when clients perform operations
-//// on file handles.
-//type Handle struct {
-////	// Sequence number.
-////	// Allows us to check if this handle was created by a previous master.
-////	seq			int
-////
-//	clientID   	ClientID   // Client to which this handle corresponds.
-//	path		FilePath   // Path of lock to which this handle corresponds.
-//}
-
 /* Create Session struct. */
 func CreateSession(clientID ClientID) (*Session, error) {
     sess := &Session{
@@ -86,6 +75,13 @@ func (sess *Session) DeleteLock(path FilePath) error {
 		return errors.New(fmt.Sprintf("Client does not hold the lock at path %s in exclusive mode", path))
 	}
 
+	// Check that the lock actually exists in the store.
+	_, err := app.store.Get(string(path))
+
+	if err != nil {
+		return errors.New(fmt.Sprintf("Lock at %s does not exist in persistent store", path))
+	}
+
 	// Delete the lock from Session metadata.
 	delete(sess.locks, path)
 
@@ -93,7 +89,7 @@ func (sess *Session) DeleteLock(path FilePath) error {
 	delete(app.locks, path)
 
 	// Delete the lock from the store.
-	err := app.store.Delete(string(path))
+	err = app.store.Delete(string(path))
 	return err
 }
 
@@ -182,6 +178,13 @@ func (sess *Session) TryAcquireLock (path FilePath, mode LockMode) (bool, error)
 }
 
 func (sess *Session) ReleaseLock (path FilePath) (error) {
+	// Check if lock exists in persistent store
+	_, err := app.store.Get(string(path))
+
+	if err != nil {
+		return errors.New(fmt.Sprintf("Lock at %s does not exist in persistent store", path))
+	}
+
 	// Check if we own the lock.
 	lock, present := sess.locks[path]
 
