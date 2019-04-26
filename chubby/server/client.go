@@ -98,52 +98,127 @@ func (sess *Session) DeleteLock(path FilePath) error {
 	return err
 }
 
-func (sess *Session) Try_AcquireLock (path FilePath, mode LockMode) (error) {
+func (sess *Session) TryAcquireLock (path FilePath, mode LockMode) (bool, error) {
 	// Validate mode of the lock.
 	if mode != EXCLUSIVE && mode != SHARED {
-		return errors.New(fmt.Sprintf("Invalid mode."))
+		return false, errors.New(fmt.Sprintf("Invalid mode."))
 	}
 
-	// Check lock file structure to determine if
+	// Do we already own the lock? Fail with error
+	_, owned := sess.locks[path]
+	if owned {
+		return false, errors.New(fmt.Sprintf("We already own the lock at %s", path))
+	}
 
-	lock_info, err := app.store.Get(path)
+	// Check if lock exists in persistent store
+	_, err := app.store.Get(string(path))
+
 	if err != nil {
-		return errors.New(fmt.Sprintf("Lock at path %s doesn't exist", path))
+		return false, errors.New(fmt.Sprintf("Lock at %s has not been opened", path))
 	}
-	lock_info_bytes := []byte(lock_info)
-	var lock Lock
-	err = json.Unmarshal(lock_info_bytes, &lock)
-	if err != nil {
-		return errors.New(fmt.Sprintf("Fail to Decode"))
+
+	// Check if lock exists in in-mem struct
+	lock, exists := app.locks[path]
+	if !exists {
+		// Assume that some failure has occured
+		// Lazily recover lock struct: add lock to in-memory struct of locks
+		// TODO: check if this is correct?
+		app.locks[path] = &Lock{
+			path: path,
+			mode: FREE,
+			owners: make(map[ClientID]bool),
+		}
+		lock = app.locks[path]
 	}
-	if mode == EXCLUSIVE {
-		if lock.mode != FREE {
-			return errors.New(fmt.Sprintf("Lock is not free"))
+
+	// Check the mode of the lock
+	switch lock.mode {
+	case EXCLUSIVE:
+		// Should fail: someone probably already owns the lock
+		if len(lock.owners) == 0 {
+			// Throw an error if there are no owners but lock.mode is exclusive:
+			// this means ReleaseLock was not implemented correctly
+			return false, errors.New("Lock has EXCLUSIVE mode despite having no owners")
+		} else if len(lock.owners) > 1 {
+			return false, errors.New("Lock has EXCLUSIVE mode but has multiple owners")
+		} else {
+			// Fail with no error
+			return false, nil
 		}
-		lock.path = path
-		lock.mode = mode
-		lock.owners = map[string]bool {
-			sess.clientID: true,
+	case SHARED:
+		// If our mode is shared, then succeed; else fail
+		if mode == EXCLUSIVE {
+			return false, nil
+		} else {  // mode == SHARED
+			// Update lock owners
+			lock.owners[sess.clientID] = true
+
+			// Add lock to session lock struct
+			sess.locks[path] = lock
+
+			// Return success
+			return true, nil
 		}
-		err = app.store.Set(path, string(json.Marshal(&lock)))
-		/* More for debugging purpose, might need to do something else late for this error*/
-		if err != nil {
-			return errors.New(fmt.Sprintf("Fail to Commit in Store"))
+	case FREE:
+		// If lock has owners, either TryAcquireLock or ReleaseLock was not implemented correctly
+		if len(lock.owners) > 0 {
+			return false, errors.New("Lock has FREE mode but is owned by 1 or more clients")
 		}
-		sess.locks[path] = lock
-	} else {
-		if lock.mode == EXCLUSIVE {
-			return errors.New(fmt.Sprintf("The lock is being held in exclusive mode."))
-		}
-		lock.mode = mode
+
+		// Should succeed regardless of mode
+		// Update lock owners
 		lock.owners[sess.clientID] = true
-		err = app.store.Set(path, json.Marshal(&lock))
-		if err != nil {
-			return errors.New(fmt.Sprintf("Fail to Commit in Store"))
-		}
+
+		// Update lock mode
+		lock.mode = mode
+
+		// Add lock to session lock struct
 		sess.locks[path] = lock
+
+		// Return success
+		return true, nil
+	default:
+		return false, errors.New(fmt.Sprintf("Lock at %s has undefined mode", path))
 	}
-	return nil
+
+	//lock_info, err := app.store.Get(path)
+	//if err != nil {
+	//	return errors.New(fmt.Sprintf("Lock at path %s doesn't exist", path))
+	//}
+	//lock_info_bytes := []byte(lock_info)
+	//var lock Lock
+	//err = json.Unmarshal(lock_info_bytes, &lock)
+	//if err != nil {
+	//	return errors.New(fmt.Sprintf("Fail to Decode"))
+	//}
+	//if mode == EXCLUSIVE {
+	//	if lock.mode != FREE {
+	//		return errors.New(fmt.Sprintf("Lock is not free"))
+	//	}
+	//	lock.path = path
+	//	lock.mode = mode
+	//	lock.owners = map[string]bool {
+	//		sess.clientID: true,
+	//	}
+	//	err = app.store.Set(path, string(json.Marshal(&lock)))
+	//	/* More for debugging purpose, might need to do something else late for this error*/
+	//	if err != nil {
+	//		return errors.New(fmt.Sprintf("Fail to Commit in Store"))
+	//	}
+	//	sess.locks[path] = lock
+	//} else {
+	//	if lock.mode == EXCLUSIVE {
+	//		return errors.New(fmt.Sprintf("The lock is being held in exclusive mode."))
+	//	}
+	//	lock.mode = mode
+	//	lock.owners[sess.clientID] = true
+	//	err = app.store.Set(path, json.Marshal(&lock))
+	//	if err != nil {
+	//		return errors.New(fmt.Sprintf("Fail to Commit in Store"))
+	//	}
+	//	sess.locks[path] = lock
+	//}
+	//return nil
 }
 
 func (sess *Session) ReleaseLock (path FilePath) (error) {
