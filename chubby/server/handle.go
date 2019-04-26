@@ -40,22 +40,35 @@ func (h *Handler) Join(req JoinRequest, res *EmptyResponse) error {
  * Called by clients:
  */
 
-// Create a lock.
-func (h *Handler) Create(req ClientRequest, res *ClientResponse) error {
+// Initialize a client-server session.
+func (h *Handler) InitSession(req ClientRequest, res *ClientResponse) error {
+
+}
+
+// KeepAlive calls allow the client to extend the Chubby session.
+func (h *Handler) KeepAlive(req ClientRequest, res *ClientResponse) error {
+
+}
+
+// Chubby API methods for handling locks.
+// Each method corresponds to a method in session.go.
+
+// Open a lock.
+func (h *Handler) OpenLock(req ClientRequest, res *ClientResponse) error {
 
 }
 
 // Delete a lock.
-func (h *Handler) Delete(req ClientRequest, res *ClientResponse) error {
+func (h *Handler) DeleteLock(req ClientRequest, res *ClientResponse) error {
 
 }
 
-// Acquire lock.
-func (h *Handler) Acquire(req ClientRequest, res *ClientResponse) error {
+// Try to acquire a lock.
+func (h *Handler) TryAcquireLock(req ClientRequest, res *ClientResponse) error {
 
 }
 
 // Release lock.
-func (h *Handler) Release(req ClientRequest, res *ClientResponse) error {
+func (h *Handler) ReleaseLock(req ClientRequest, res *ClientResponse) error {
 
 }
