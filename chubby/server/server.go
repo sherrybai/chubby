@@ -40,6 +40,10 @@ type App struct {
 	// In-memory struct of handles.
 	// Maps handle IDs to handle metadata.
 	// handles map[int]Handle
+
+	// In-memory struct of locks.
+	// Maps filepaths to Lock structs.
+	locks map[FilePath]*Lock
 }
 
 // No choice but to make this variable package-level :(

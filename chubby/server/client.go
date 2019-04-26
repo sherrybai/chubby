@@ -11,6 +11,7 @@ type LockMode	int
 const (
 	EXCLUSIVE LockMode = iota
 	SHARED
+	FREE
 )
 
 // Session contains metadata for one Chubby session.
@@ -62,6 +63,13 @@ func (sess *Session) OpenLock(clientID ClientID, path FilePath) error {
 		if err != nil {
 			return err
 		}
+
+		// Add lock to in-memory struct of locks
+		app.locks[path] = &Lock{
+			path: path,
+			mode: FREE,
+			owners: make(map[ClientID]bool),
+		}
 	}
 
 	return nil
@@ -81,6 +89,9 @@ func (sess *Session) DeleteLock(path FilePath) error {
 
 	// Delete the lock from Session metadata.
 	delete(sess.locks, path)
+
+	// Delete the lock from in-memory struct of locks
+	delete(app.locks, path)
 
 	// Delete the lock from the store.
 	err := app.store.Delete(string(path))
