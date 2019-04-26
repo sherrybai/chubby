@@ -3,7 +3,6 @@ package server
 import (
 	"errors"
 	"fmt"
-	"encoding/json"
 )
 
 // Mode of a lock
@@ -178,70 +177,57 @@ func (sess *Session) TryAcquireLock (path FilePath, mode LockMode) (bool, error)
 		// Return success
 		return true, nil
 	default:
-		return false, errors.New(fmt.Sprintf("Lock at %s has undefined mode", path))
+		return false, errors.New(fmt.Sprintf("Lock at %s has undefined mode %d", path, lock.mode))
 	}
-
-	//lock_info, err := app.store.Get(path)
-	//if err != nil {
-	//	return errors.New(fmt.Sprintf("Lock at path %s doesn't exist", path))
-	//}
-	//lock_info_bytes := []byte(lock_info)
-	//var lock Lock
-	//err = json.Unmarshal(lock_info_bytes, &lock)
-	//if err != nil {
-	//	return errors.New(fmt.Sprintf("Fail to Decode"))
-	//}
-	//if mode == EXCLUSIVE {
-	//	if lock.mode != FREE {
-	//		return errors.New(fmt.Sprintf("Lock is not free"))
-	//	}
-	//	lock.path = path
-	//	lock.mode = mode
-	//	lock.owners = map[string]bool {
-	//		sess.clientID: true,
-	//	}
-	//	err = app.store.Set(path, string(json.Marshal(&lock)))
-	//	/* More for debugging purpose, might need to do something else late for this error*/
-	//	if err != nil {
-	//		return errors.New(fmt.Sprintf("Fail to Commit in Store"))
-	//	}
-	//	sess.locks[path] = lock
-	//} else {
-	//	if lock.mode == EXCLUSIVE {
-	//		return errors.New(fmt.Sprintf("The lock is being held in exclusive mode."))
-	//	}
-	//	lock.mode = mode
-	//	lock.owners[sess.clientID] = true
-	//	err = app.store.Set(path, json.Marshal(&lock))
-	//	if err != nil {
-	//		return errors.New(fmt.Sprintf("Fail to Commit in Store"))
-	//	}
-	//	sess.locks[path] = lock
-	//}
-	//return nil
 }
 
 func (sess *Session) ReleaseLock (path FilePath) (error) {
+	// Check if we own the lock.
 	lock, present := sess.locks[path]
-	if !present || lock == nil{
-		return errors.New(fmt.Sprintf("Lock at path %s doesn't exist", path))
+
+	// If not in session locks map, throw an error
+	if !present || lock == nil {
+		return errors.New(fmt.Sprintf("Lock at %s does not exist in session locks map", path))
 	}
+
+	// Check that we are among the owners of the lock.
 	_, present = lock.owners[sess.clientID]
 	if !present || !lock.owners[sess.clientID] {
 		return errors.New(fmt.Sprintf("Client %d does not own lock at path %s", sess.clientID, path))
 	}
-	if lock.mode == FREE {
-		return nil
-	} else if lock.mode == EXCLUSIVE {
-		lock.mode = FREE
+
+	// Switch on lock mode.
+	switch lock.mode {
+	case FREE:
+		// Throw an error: this means TryAcquire was not implemented correctly
+		return errors.New("Lock has FREE mode: acquire not implemented correctly")
+	case EXCLUSIVE:
+		// Delete from lock owners
 		delete(lock.owners, sess.clientID)
-	} else if lock.mode == SHARED {
+
+		// Set lock mode
+		lock.mode = FREE
+
+		// Delete lock from session locks map
+		delete(sess.locks, path)
+
+		// Return without error
+		return nil
+	case SHARED:
+		// Delete from lock owners
+		delete(lock.owners, sess.clientID)
+
+		// Set lock mode if no more owners
 		if len(lock.owners) == 1 {
 			lock.mode = FREE
-			delete(lock.owners, sess.clientID)
-		} else {
-			delete(lock.owners, sess.clientID)
 		}
+
+		// Delete lock from session locks map
+		delete(sess.locks, path)
+
+		// Return without error
+		return nil
+	default:
+		return errors.New(fmt.Sprintf("Lock at %s has undefined mode %d", path, lock.mode))
 	}
-	return nil
 }
