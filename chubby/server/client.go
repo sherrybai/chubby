@@ -222,6 +222,12 @@ func (sess *Session) TryAcquireLock (path FilePath, mode LockMode) (bool, error)
 }
 
 func (sess *Session) ReleaseLock (path FilePath) (error) {
+	// Check if lock exists in persistent store
+	_, err := app.store.Get(string(path))
+
+	if err != nil {
+		return false, errors.New(fmt.Sprintf("Lock at %s has not been opened", path))
+	}
 	lock, present := sess.locks[path]
 	if !present || lock == nil{
 		return errors.New(fmt.Sprintf("Lock at path %s doesn't exist", path))
