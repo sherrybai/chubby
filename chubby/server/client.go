@@ -98,7 +98,7 @@ func (sess *Session) Try_AcquireLock (path FilePath, mode LockMode) (error) {
 	if err != nil {
 		return errors.New(fmt.Sprintf("Lock at path %s doesn't exist", path))
 	}
-	lock_info_bytes = []byte(lock_info)
+	lock_info_bytes := []byte(lock_info)
 	var lock Lock
 	err = json.Unmarshal(lock_info_bytes, &lock)
 	if err != nil {
@@ -111,9 +111,9 @@ func (sess *Session) Try_AcquireLock (path FilePath, mode LockMode) (error) {
 		lock.path = path
 		lock.mode = mode
 		lock.owners = map[string]bool {
-			sess.sessionID: true,
+			sess.clientID: true,
 		}
-		err = app.store.Set(path, json.Marshal(&lock))
+		err = app.store.Set(path, string(json.Marshal(&lock)))
 		/* More for debugging purpose, might need to do something else late for this error*/
 		if err != nil {
 			return errors.New(fmt.Sprintf("Fail to Commit in Store"))
@@ -124,7 +124,7 @@ func (sess *Session) Try_AcquireLock (path FilePath, mode LockMode) (error) {
 			return errors.New(fmt.Sprintf("The lock is being held in exclusive mode."))
 		}
 		lock.mode = mode
-		lock.owners[sess.sessionID] = true
+		lock.owners[sess.clientID] = true
 		err = app.store.Set(path, json.Marshal(&lock))
 		if err != nil {
 			return errors.New(fmt.Sprintf("Fail to Commit in Store"))
@@ -139,7 +139,7 @@ func (sess *Session) ReleaseLock (path FilePath) (error) {
 	if err != nil {
 		return errors.New(fmt.Sprintf("Lock at path %s doesn't exist", path))
 	}
-	lock_info_bytes = []byte(lock_info)
+	lock_info_bytes := []byte(lock_info)
 	var lock Lock
 	err = json.Unmarshal(lock_info_bytes, &lock)
 	if err != nil {
@@ -150,7 +150,7 @@ func (sess *Session) ReleaseLock (path FilePath) (error) {
 	} else if lock.mode == EXCLUSIVE {
 		lock.mode = FREE
 		sess.locks[path] = false
-		delete(lock.owners, sess.sessionID)
+		delete(lock.owners, sess.clientID)
 		err = app.store.Set(path, json.Marshal(&lock))
 		if err != nil {
 			return errors.New(fmt.Sprintf("Fail to commit"))
@@ -159,14 +159,14 @@ func (sess *Session) ReleaseLock (path FilePath) (error) {
 		if len(lock.owners) == 1 {
 			lock.mode = FREE
 			sess.locks[path] = false
-			delete(lock.owners, sess.sessionID)
+			delete(lock.owners, sess.clientID)
 			err = app.store.Set(path, json.Marshal(&lock))
 			if err != nil {
 				return errors.New(fmt.Sprintf("Fail to commit"))
 			}
 		} else {
 			sess.locks[path] = false
-			delete(lock.owners, sess.sessionID)
+			delete(lock.owners, sess.clientID)
 			err = app.store.Set(path, json.Marshal(&lock))
 			if err != nil {
 				return errors.New(fmt.Sprintf("Fail to commit"))
