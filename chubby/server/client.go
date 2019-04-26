@@ -147,42 +147,25 @@ func (sess *Session) Try_AcquireLock (path FilePath, mode LockMode) (error) {
 }
 
 func (sess *Session) ReleaseLock (path FilePath) (error) {
-	lock_info, err := app.store.Get(path) 
-	if err != nil {
+	lock, present := sess.locks[path]
+	if !present || lock == nil{
 		return errors.New(fmt.Sprintf("Lock at path %s doesn't exist", path))
 	}
-	lock_info_bytes := []byte(lock_info)
-	var lock Lock
-	err = json.Unmarshal(lock_info_bytes, &lock)
-	if err != nil {
-		return errors.New(fmt.Sprintf("Fail to Decode"))
+	_, present = lock.owners[sess.clientID]
+	if !present || !lock.owners[sess.clientID] {
+		return errors.New(fmt.Sprintf("Client %d does not own lock at path %s", sess.clientID, path))
 	}
 	if lock.mode == FREE {
 		return nil
 	} else if lock.mode == EXCLUSIVE {
 		lock.mode = FREE
-		sess.locks[path] = false
 		delete(lock.owners, sess.clientID)
-		err = app.store.Set(path, json.Marshal(&lock))
-		if err != nil {
-			return errors.New(fmt.Sprintf("Fail to commit"))
-		}
 	} else if lock.mode == SHARED {
 		if len(lock.owners) == 1 {
 			lock.mode = FREE
-			sess.locks[path] = false
 			delete(lock.owners, sess.clientID)
-			err = app.store.Set(path, json.Marshal(&lock))
-			if err != nil {
-				return errors.New(fmt.Sprintf("Fail to commit"))
-			}
 		} else {
-			sess.locks[path] = false
 			delete(lock.owners, sess.clientID)
-			err = app.store.Set(path, json.Marshal(&lock))
-			if err != nil {
-				return errors.New(fmt.Sprintf("Fail to commit"))
-			}
 		}
 	}
 	return nil
