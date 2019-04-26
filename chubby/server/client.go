@@ -53,8 +53,7 @@ func CreateSession(clientID ClientID) (*Session, error) {
 }
 
 // Create the lock if it does not exist.
-// Add the lock to list of this session's open files.
-func Open(clientID ClientID, path FilePath) error {
+func (sess *Session) OpenLock(clientID ClientID, path FilePath) error {
 	// Check if lock exists in persistent store
 	_, err := app.store.Get(string(path))
 	if err != nil {
@@ -64,8 +63,6 @@ func Open(clientID ClientID, path FilePath) error {
 			return err
 		}
 	}
-
-
 
 	return nil
 }
@@ -91,10 +88,14 @@ func (sess *Session) DeleteLock(path FilePath) error {
 }
 
 func (sess *Session) Try_AcquireLock (path FilePath, mode LockMode) (error) {
+	// Validate mode of the lock.
 	if mode != EXCLUSIVE && mode != SHARED {
 		return errors.New(fmt.Sprintf("Invalid mode."))
 	}
-	lock_info, err := app.store.Get(path) 
+
+	// Check lock file structure to determine if
+
+	lock_info, err := app.store.Get(path)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Lock at path %s doesn't exist", path))
 	}
