@@ -76,6 +76,11 @@ func (sess *Session) OpenLock(clientID ClientID, path FilePath) error {
 }
 
 func (sess *Session) DeleteLock(path FilePath) error {
+	_, err := app.store.Get(string(path))
+
+	if err != nil {
+		return false, errors.New(fmt.Sprintf("Lock at %s has not been opened", path))
+	}
 	// If we are not holding the lock, we cannot delete it.
 	lock, exists := sess.locks[path]
 	if !exists {
