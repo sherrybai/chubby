@@ -25,8 +25,9 @@ import (
 	"os"
 )
 
-// No choice but to make this variable package-level :(
-var app *App
+type ClientID string
+type SessionID 	string
+type FilePath 	string
 
 type App struct {
 	listener net.Listener
@@ -36,8 +37,13 @@ type App struct {
 
 	logger *log.Logger
 
-	fileHandlers map[int]string
+	// In-memory struct of handles.
+	// Maps handle IDs to handle metadata.
+	// handles map[int]Handle
 }
+
+// No choice but to make this variable package-level :(
+var app *App
 
 func Run(conf *config.Config) {
 	var err error
@@ -51,8 +57,8 @@ func Run(conf *config.Config) {
 	// Create a new store.
 	app.store = store.New(conf.RaftDir, conf.RaftBind, conf.InMem)
 
-	// Initialize a map
-	app.fileHandlers = make(map[int]string)
+	//// Initialize a map
+	//app.handles = make(map[int]Handle)
 
 	// Open the store.
 	bootstrap := conf.Join == ""

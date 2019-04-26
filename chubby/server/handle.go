@@ -13,43 +13,49 @@ type JoinRequest struct {
 	NodeID string
 }
 
-type CreateLockRequest struct {
-	name LockName
-	path LockPath
-}
-
-type clientRequest struct {
-	path LockPath
-}
-
-type clientResponse struct {
-	isSuccessful bool
-}
-
-type acquireLockResponse struct {
-	isSuccessful bool
-	name LockName
-}
-
 type EmptyResponse struct {}
+
+
+type ClientRequest struct {
+	params 		[]byte
+}
+
+type ClientResponse struct {
+	response	[]byte
+}
 
 // RPC handler type
 type Handler int
 
+/*
+ * Called by servers:
+ */
+
 // Join the caller server to our server.
 func (h *Handler) Join(req JoinRequest, res *EmptyResponse) error {
-	
 	return app.store.Join(req.NodeID, req.RaftAddr)
 }
 
-func (h *Handler) Create(req clientRequest, res *clientResponse) error
+/*
+ * Called by clients:
+ */
 
-func (h *Handler) Delete(req clientRequest, res *clientResponse) error
+// Create a lock.
+func (h *Handler) Create(req ClientRequest, res *ClientResponse) error {
 
-func (h *Handler) Acquire(req clientRequest, res *clientResponse) error
+}
 
-func (h *Handler) Release(req clientRequest, res *clientResponse) error
-// Open the file handler
-func (h *Handler) Open() error {
-	return 
+// Delete a lock.
+func (h *Handler) Delete(req ClientRequest, res *ClientResponse) error {
+
+}
+
+// Acquire lock.
+func (h *Handler) Acquire(req ClientRequest, res *ClientResponse) error {
+
+}
+
+// Release lock.
+func (h *Handler) Release(req ClientRequest, res *ClientResponse) error {
+
 }
