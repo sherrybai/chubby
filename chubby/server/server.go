@@ -26,7 +26,6 @@ import (
 )
 
 type ClientID string
-type SessionID 	string
 type FilePath 	string
 
 type App struct {
@@ -44,6 +43,9 @@ type App struct {
 	// In-memory struct of locks.
 	// Maps filepaths to Lock structs.
 	locks map[FilePath]*Lock
+
+	// In-memory struct of sessions.
+	sessions map[ClientID]*Session
 }
 
 // No choice but to make this variable package-level :(

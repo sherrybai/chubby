@@ -1,3 +1,6 @@
+// Defines Chubby session metadata, as well as operations on locks that can
+// be performed as part of a Chubby session.
+
 package server
 
 import (

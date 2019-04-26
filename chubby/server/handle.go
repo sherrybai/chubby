@@ -1,3 +1,5 @@
+// Define RPC calls accepted by Chubby server.
+
 package server
 
 import "errors"
@@ -42,7 +44,10 @@ func (h *Handler) Join(req JoinRequest, res *EmptyResponse) error {
 
 // Initialize a client-server session.
 func (h *Handler) InitSession(req ClientRequest, res *ClientResponse) error {
-
+	// Maybe here: create a new thread for each session that handles session timeouts.
+	// Put some new method "handleSession" in server.go
+	// then call go handleSession()
+	// -> handleSession can check if timeout has expired at regular intervals?
 }
 
 // KeepAlive calls allow the client to extend the Chubby session.
