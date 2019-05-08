@@ -83,7 +83,7 @@ func Run(conf *config.Config) {
 		app.logger.Printf("set up connection to %s", conf.Join)
 
 		var req JoinRequest
-		var resp EmptyResponse
+		var resp JoinResponse
 
 		req.RaftAddr = conf.RaftBind
 		req.NodeID = conf.NodeID

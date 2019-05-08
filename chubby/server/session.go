@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 )
 
 // Mode of a lock
@@ -29,6 +30,9 @@ type Session struct {
 	// TimeToLive
 	TTL             int
 
+	// Length of the Lease
+	leaseLength     int
+
 	//TTL Lock
 	TTLLock 		sync.Mutex
 
@@ -49,28 +53,33 @@ type Lock struct {
 
 /* Create Session struct. */
 func CreateSession(clientID ClientID) (*Session, error) {
+	if _, ok := app.sessions[clientID]; ok {
+		return nil, errors.New(fmt.Sprintf("The client already has a session established with the master"))
+	}
     sess := &Session{
         clientID:   	clientID,
         TTL:            defaultTimeToLive,
-        TTLchannel:     make(chan string,1)
+        leaseLength:    defaultTimeToLive,
+        TTLchannel:     make(chan string,1),
         locks:          make(map[FilePath]*Lock),
     }
     go func(sess *Session) {
 		ticker := time.Tick(time.Second)
-		for now := range ticker {
+		for  range ticker {
 			if sess.TTL <= 2 {
 				sess.TTLchannel <- "Ready"
 			}
 			if sess.TTL > 0 {
-				sess.TTLLock.lock()
+				sess.TTLLock.Lock()
 				sess.TTL = sess.TTL - 1
-				sess.TTLLock.unlock()
+				sess.TTLLock.Unlock()
 			} else {
 				DestroySession(clientID, sess)
 				return
 			}	
 		}
 	}(sess)
+    app.sessions[clientID] = sess
     return sess, nil
 }
 
@@ -82,6 +91,9 @@ func  DestroySession(clientID ClientID, sess *Session) (error) {
 
 // Create the lock if it does not exist.
 func (sess *Session) OpenLock(clientID ClientID, path FilePath) error {
+	if _, ok := app.sessions[sess.clientID]; !ok {
+		return errors.New(fmt.Sprintf("The current session is closed"))
+	}
 	// Check if lock exists in persistent store
 	_, err := app.store.Get(string(path))
 	if err != nil {
@@ -104,13 +116,20 @@ func (sess *Session) OpenLock(clientID ClientID, path FilePath) error {
 
 // Extend Lease after receiving keepalive messages
 func (sess *Session) KeepAlive(clientID ClientID) error {
+	if _, ok := app.sessions[sess.clientID]; !ok {
+		return errors.New(fmt.Sprintf("The current session is closed"))
+	}
 	<- sess.TTLchannel
 	sess.TTL = defaultTimeToLive
+	sess.leaseLength = sess.leaseLength + defaultTimeToLive
 	return nil
 }
 
 // Delete the lock. Lock must be held in exclusive mode before calling DeleteLock.
 func (sess *Session) DeleteLock(path FilePath) error {
+	if _, ok := app.sessions[sess.clientID]; !ok {
+		return errors.New(fmt.Sprintf("The current session is closed"))
+	}
 	// If we are not holding the lock, we cannot delete it.
 	lock, exists := sess.locks[path]
 	if !exists {
@@ -142,6 +161,9 @@ func (sess *Session) DeleteLock(path FilePath) error {
 
 // Try to acquire the lock, returning either success (true) or failure (false).
 func (sess *Session) TryAcquireLock (path FilePath, mode LockMode) (bool, error) {
+	if _, ok := app.sessions[sess.clientID]; !ok {
+		return false, errors.New(fmt.Sprintf("The current session is closed"))
+	}
 	// Validate mode of the lock.
 	if mode != EXCLUSIVE && mode != SHARED {
 		return false, errors.New(fmt.Sprintf("Invalid mode."))
@@ -227,6 +249,9 @@ func (sess *Session) TryAcquireLock (path FilePath, mode LockMode) (bool, error)
 
 // Release the lock.
 func (sess *Session) ReleaseLock (path FilePath) (error) {
+	if _, ok := app.sessions[sess.clientID]; !ok {
+		return errors.New(fmt.Sprintf("The current session is closed"))
+	}
 	// Check if lock exists in persistent store
 	_, err := app.store.Get(string(path))
 
