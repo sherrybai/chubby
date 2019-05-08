@@ -16,24 +16,17 @@ type JoinRequest struct {
 }
 
 type JoinResponse struct {
-	error string
+	error error
 }
 
 
-type KeepAliveRequest struct {
+type ClientRequest struct {
+	clientID	string
 	params 		[]byte
 }
 
-type KeepAliveResponse struct {
+type ClientResponse struct {
 	response	[]byte
-}
-
-type createSessionRequest struct {
-	clientID 		ClientID
-}
-
-type createSessionResponse struct {
-	error string
 }
 
 // RPC handler type
@@ -56,11 +49,7 @@ func (h *Handler) Join(req JoinRequest, res *JoinResponse) error {
 
 // Initialize a client-server session.
 func (h *Handler) InitSession(req ClientRequest, res *ClientResponse) error {
-	// Maybe here: create a new thread for each session that handles session timeouts.
-	// Put some new method "handleSession" in server.go
-	// then call go handleSession()
-	// -> handleSession can check if timeout has expired at regular intervals?
-	sess, _ := CreateSession(clientID ClientID)
+	sess, err := CreateSession(ClientID(req.clientID))
 
 
 }

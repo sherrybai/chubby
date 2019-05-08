@@ -6,6 +6,7 @@ import (
 )
 
 type ClientRequest struct {
+	clientID 	string
 	params 		[]byte
 }
 
@@ -17,11 +18,11 @@ type ClientSession struct {
 	// RPC client
 	rpcClient			*rpc.Client
 
-	// Local timeout
-	timeout				time.Time
+	// Record start time
+	startTime			time.Time
 
-	// Jeopardy period
-	jeopardyDuration	time.Duration
+	// Local timeout
+	timeout				time.Duration
 
 	// Are we in jeopardy right now?
 	jeopardyFlag		bool
@@ -47,8 +48,8 @@ func InitSession(raftAddr string) (*ClientSession, error) {
 	// Initialize a session.
 	sess := &ClientSession{
 		rpcClient:		  client,
-		timeout:          time.Now().Add(DefaultLeaseDuration),
-		jeopardyDuration: JeopardyDuration,
+		startTime:		  time.Now(),
+		timeout:          DefaultLeaseDuration,
 		jeopardyFlag:     false,
 		jeopardyChan:     nil,
 	}
@@ -73,9 +74,11 @@ func (sess *ClientSession) MonitorSession() {
 	var err error
 
 	for {
+		// Make new keepAlive channel.
+		// This should be ok because this loop only occurs every 12 seconds to 57 seconds.
+		keepAliveChan := make(chan ClientResponse, 1)
+
 		// Send a KeepAlive, waiting for a response from the master.
-		// TODO: don't keep making new keepAliveChans
-		keepAliveChan := make(chan ClientResponse)
 		go func() {
 			// TODO: fill out req/resp
 			req := ClientRequest{}
@@ -90,16 +93,24 @@ func (sess *ClientSession) MonitorSession() {
 			// Process master's response
 			// The master's response should contain a new, extended lease timeout.
 
-		case <- time.After(sess.timeout.Sub(time.Now())):
+		case <- time.After(sess.startTime.Add(sess.timeout).Sub(time.Now())):
 			// Jeopardy period begins
 			// If no response within local lease timeout, we have to block all RPCs
 			// from the client until the jeopardy period is over.
 
-		case <- time.After(sess.timeout.Add(JeopardyDuration).Sub(time.Now())):
-			// Jeopardy period ends -- tear down the session
+			// Master response should give time since startTime until timeout occurs.
+			// For example: extends timeout from 12s to 24s
 
-			// The loop should end.
-			break
+			// Keep waiting for the response
+			select {
+			case resp := <- keepAliveChan:
+				// Session is saved! Unblock all the requests
+
+			case <- time.After(sess.startTime.Add(sess.timeout + JeopardyDuration).Sub(time.Now())):
+				// Jeopardy period ends -- tear down the session
+
+				break
+			}
 		}
 	}
 }

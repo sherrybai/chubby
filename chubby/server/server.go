@@ -92,6 +92,9 @@ func Run(conf *config.Config) {
 		if err != nil {
 			log.Fatal(err)
 		}
+		if resp.error != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// Listen for client connections.

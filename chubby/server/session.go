@@ -67,13 +67,16 @@ func CreateSession(clientID ClientID) (*Session, error) {
 		ticker := time.Tick(time.Second)
 		for  range ticker {
 			if sess.TTL <= 2 {
+				// Trigger KeepAlive response 2 seconds before timeout
 				sess.TTLchannel <- "Ready"
 			}
 			if sess.TTL > 0 {
+				// Decrement TTL
 				sess.TTLLock.Lock()
 				sess.TTL = sess.TTL - 1
 				sess.TTLLock.Unlock()
 			} else {
+				// TTL expired: destroy the session
 				DestroySession(clientID, sess)
 				return
 			}	
