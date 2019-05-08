@@ -120,7 +120,7 @@ func (sess *Session) TryAcquireLock (path FilePath, mode LockMode) (bool, error)
 	// Check if lock exists in in-mem struct
 	lock, exists := app.locks[path]
 	if !exists {
-		// Assume that some failure has occured
+		// Assume that some failure has occurred
 		// Lazily recover lock struct: add lock to in-memory struct of locks
 		// TODO: check if this is correct?
 		app.locks[path] = &Lock{
