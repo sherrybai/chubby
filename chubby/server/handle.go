@@ -15,15 +15,25 @@ type JoinRequest struct {
 	NodeID string
 }
 
-type EmptyResponse struct {}
+type JoinResponse struct {
+	error string
+}
 
 
-type ClientRequest struct {
+type KeepAliveRequest struct {
 	params 		[]byte
 }
 
-type ClientResponse struct {
+type KeepAliveResponse struct {
 	response	[]byte
+}
+
+type createSessionRequest struct {
+	clientID 		ClientID
+}
+
+type createSessionResponse struct {
+	error string
 }
 
 // RPC handler type
@@ -34,8 +44,10 @@ type Handler int
  */
 
 // Join the caller server to our server.
-func (h *Handler) Join(req JoinRequest, res *EmptyResponse) error {
-	return app.store.Join(req.NodeID, req.RaftAddr)
+func (h *Handler) Join(req JoinRequest, res *JoinResponse) error {
+	err := app.store.Join(req.NodeID, req.RaftAddr)
+	res.error = err
+	return err
 }
 
 /*
@@ -48,6 +60,9 @@ func (h *Handler) InitSession(req ClientRequest, res *ClientResponse) error {
 	// Put some new method "handleSession" in server.go
 	// then call go handleSession()
 	// -> handleSession can check if timeout has expired at regular intervals?
+	sess, _ := CreateSession(clientID ClientID)
+
+
 }
 
 // KeepAlive calls allow the client to extend the Chubby session.

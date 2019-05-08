@@ -6,6 +6,7 @@ package server
 import (
 	"errors"
 	"fmt"
+	"sync"
 )
 
 // Mode of a lock
@@ -16,12 +17,23 @@ const (
 	FREE
 )
 
+const defaultTimeToLive = 12
+
 // Session contains metadata for one Chubby session.
 // For simplicity, we say that each client can only init one session with
 // the Chubby servers.
 type Session struct {
 	// Client to which this Session corresponds.
 	clientID 		ClientID
+
+	// TimeToLive
+	TTL             int
+
+	//TTL Lock
+	TTLLock 		sync.Mutex
+
+	// Channel used to block Keepalive 
+	TTLchannel 	chan string
 
     // A data structure describing which locks the client holds.
     // Maps lock filepath -> Lock struct.
@@ -39,9 +51,33 @@ type Lock struct {
 func CreateSession(clientID ClientID) (*Session, error) {
     sess := &Session{
         clientID:   	clientID,
+        TTL:            defaultTimeToLive,
+        TTLchannel:     make(chan string,1)
         locks:          make(map[FilePath]*Lock),
     }
+    go func(sess *Session) {
+		ticker := time.Tick(time.Second)
+		for now := range ticker {
+			if sess.TTL <= 2 {
+				sess.TTLchannel <- "Ready"
+			}
+			if sess.TTL > 0 {
+				sess.TTLLock.lock()
+				sess.TTL = sess.TTL - 1
+				sess.TTLLock.unlock()
+			} else {
+				DestroySession(clientID, sess)
+				return
+			}	
+		}
+	}(sess)
     return sess, nil
+}
+
+func  DestroySession(clientID ClientID, sess *Session) (error) {
+	delete(app.sessions,clientID)
+	sess = nil
+	return nil
 }
 
 // Create the lock if it does not exist.
@@ -63,6 +99,13 @@ func (sess *Session) OpenLock(clientID ClientID, path FilePath) error {
 		}
 	}
 
+	return nil
+}
+
+// Extend Lease after receiving keepalive messages
+func (sess *Session) KeepAlive(clientID ClientID) error {
+	<- sess.TTLchannel
+	sess.TTL = defaultTimeToLive
 	return nil
 }
 
