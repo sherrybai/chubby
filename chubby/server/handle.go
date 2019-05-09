@@ -3,17 +3,8 @@
 package server
 
 import (
-	"errors"
 	"encoding/json"
-	"fmt"
-	"runtime"
 	"time"
-)
-
-var (
-	ErrParams        = errors.New("ERR params invalid")
-	ErrRespType      = errors.New("ERR resp type invalid")
-	ErrCmdNotSupport = errors.New("ERR command not supported")
 )
 
 type JoinRequest struct {
@@ -73,14 +64,19 @@ func (h *Handler) Join(req JoinRequest, res *JoinResponse) error {
 
 // Initialize a client-server session.
 func (h *Handler) InitSession(req initSessionRequest, res *initSessionResponse) error {
+	// If we are not the leader, return address of actual leader
 	if app.address != string(app.store.Raft.Leader()) {
-		res.leaseLength = 0*time.Second
+		res.leaseLength = 0
 		res.leaderAddress = string(app.store.Raft.Leader())
 	}
+
+	// Create a new session.
 	sess, err := CreateSession(ClientID(req.clientID))
 	if err != nil {
-		return nil
+		return err
 	}
+
+	// Respond with address of current leader.
 	response := &Response{leaderAddress: string(app.store.Raft.Leader()), leaseLength: sess.leaseLength}
 	b, err := json.Marshal(response)
 	if err != nil {
@@ -108,22 +104,22 @@ func (h *Handler) HandleKeepAlive(req ClientRequest, res *ClientResponse) error 
 // Chubby API methods for handling locks.
 // Each method corresponds to a method in session.go.
 
-// Open a lock.
-func (h *Handler) OpenLock(req ClientRequest, res *ClientResponse) error {
-
-}
-
-// Delete a lock.
-func (h *Handler) DeleteLock(req ClientRequest, res *ClientResponse) error {
-
-}
-
-// Try to acquire a lock.
-func (h *Handler) TryAcquireLock(req ClientRequest, res *ClientResponse) error {
-
-}
-
-// Release lock.
-func (h *Handler) ReleaseLock(req ClientRequest, res *ClientResponse) error {
-
-}
+//// Open a lock.
+//func (h *Handler) OpenLock(req ClientRequest, res *ClientResponse) error {
+//
+//}
+//
+//// Delete a lock.
+//func (h *Handler) DeleteLock(req ClientRequest, res *ClientResponse) error {
+//
+//}
+//
+//// Try to acquire a lock.
+//func (h *Handler) TryAcquireLock(req ClientRequest, res *ClientResponse) error {
+//
+//}
+//
+//// Release lock.
+//func (h *Handler) ReleaseLock(req ClientRequest, res *ClientResponse) error {
+//
+//}

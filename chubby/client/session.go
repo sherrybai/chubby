@@ -7,16 +7,29 @@ import (
 	"time"
 )
 
-type ClientRequest struct {
-	clientID 	string
-	params 		[]byte
+type ClientID string
+
+type InitSessionRequest struct {
+	clientID ClientID
 }
 
-type ClientResponse struct {
-	response	[]byte
+type InitSessionResponse struct {
+	leaderAddress string
+	isLeader bool
+}
+
+type KeepAliveRequest struct {
+	clientID ClientID
+}
+
+type KeepAliveResponse struct {
+	leaseLength time.Duration
 }
 
 type ClientSession struct {
+	// Client ID
+	clientID			ClientID
+
 	// Server address
 	serverAddr			string
 
@@ -27,7 +40,7 @@ type ClientSession struct {
 	startTime			time.Time
 
 	// Local lease length
-	leaseLength				time.Duration
+	leaseLength			time.Duration
 
 	// Are we in jeopardy right now?
 	jeopardyFlag		bool
@@ -47,36 +60,43 @@ const JeopardyDuration time.Duration = 45 * time.Second
 
 // Set up a Chubby session and periodically send KeepAlives to the server.
 // This method should be run as a new goroutine by the client.
-func InitSession(serverAddr string) (*ClientSession, error) {
+func InitSession(clientID ClientID, serverAddr string) (*ClientSession, error) {
+	// Initialize a session.
+	sess := &ClientSession{
+		clientID:     clientID,
+		serverAddr:   serverAddr,
+		startTime:    time.Now(),
+		leaseLength:  DefaultLeaseDuration,
+		jeopardyFlag: false,
+		jeopardyChan: nil,
+		expired:      false,
+		logger:       log.New(os.Stderr, "[client] ", log.LstdFlags),
+	}
+
+	sess.logger.Printf("session with %s initialized at client", serverAddr)
+
+	// Call InitSession at server.
 	// Set up TCP connection to serverAddr.
-	client, err := rpc.Dial("tcp", serverAddr)
+	rpcClient, err := rpc.Dial("tcp", serverAddr)
+	if err != nil {
+		return nil, err
+	}
+	defer rpcClient.Close()
+
+	// Make RPC call.
+	req := InitSessionRequest{clientID: clientID}
+	resp := InitSessionResponse{}
+	err = rpcClient.Call("Handler.InitSession", req, &resp)
 	if err != nil {
 		return nil, err
 	}
 
-	// Initialize a session.
-	sess := &ClientSession{
-		serverAddr:		  serverAddr,
-		rpcClient:		  client,
-		startTime:		  time.Now(),
-		leaseLength:      DefaultLeaseDuration,
-		jeopardyFlag:     false,
-		jeopardyChan:     nil,
-		expired:		  false,
-		logger:			  log.New(os.Stderr, "[client] ", log.LstdFlags),
-	}
-
-	sess.logger.Printf("session with %s initialized", serverAddr)
-
-	// TODO: fill out req/resp
-	req := ClientRequest{}
-	resp := ClientResponse{}
-	err = client.Call("Handler.InitSession", req, resp)
-
 	// If the response is that the node at the address is not the leader,
 	// try to send an InitSession to the leader.
-
-	// Otherwise, throw an error.
+	if !resp.isLeader {
+		sess.logger.Printf("%s is not leader: calling InitSession to server %s", serverAddr, resp.leaderAddress)
+		return InitSession(clientID, resp.leaderAddress)
+	}
 
 	// Call MonitorSession.
 	go sess.MonitorSession()
@@ -90,14 +110,15 @@ func (sess *ClientSession) MonitorSession() {
 	for {
 		// Make new keepAlive channel.
 		// This should be ok because this loop only occurs every 12 seconds to 57 seconds.
-		keepAliveChan := make(chan ClientResponse, 1)
+		keepAliveChan := make(chan KeepAliveResponse, 1)
 
 		// Send a KeepAlive, waiting for a response from the master.
 		go func() {
 			// TODO: fill out req/resp
-			req := ClientRequest{}
-			resp := ClientResponse{}
+			req := KeepAliveRequest{}
+			resp := KeepAliveResponse{}
 			err = sess.rpcClient.Call("Handler.KeepAlive", req, resp)
+			
 			keepAliveChan <- resp
 		}()
 
@@ -111,6 +132,11 @@ func (sess *ClientSession) MonitorSession() {
 			// The master's response should contain a new, extended lease timeout.
 			sess.logger.Printf("session with %s received within lease timeout", sess.serverAddr)
 
+			// Adjust new lease length.
+			if (sess.leaseLength >= resp.leaseLength) {
+
+			}
+			sess.leaseLength = resp.leaseLength
 
 		case <- time.After(durationLeaseOver):
 			// Jeopardy period begins

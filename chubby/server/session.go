@@ -80,7 +80,7 @@ func (sess *Session) MonitorSession() {
 	// At each second, check time until the lease is over.
 	ticker := time.Tick(time.Second)
 	for range ticker {
-		durationLeaseOver := time.Until(sess.startTime.Add(leaseLength))
+		durationLeaseOver := time.Until(sess.startTime.Add(sess.leaseLength))
 		if durationLeaseOver <= (2 * time.Second) {
 			// Trigger KeepAlive response 2 seconds before timeout
 			sess.ttlChannel <- "Ready"
