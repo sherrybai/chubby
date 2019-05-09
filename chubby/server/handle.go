@@ -79,7 +79,7 @@ func (h *Handler) InitSession(req initSessionRequest, res *initSessionResponse) 
 	}
 	sess, err := CreateSession(ClientID(req.clientID))
 	if err != nil {
-		return nil
+		return err
 	}
 	response := &Response{leaderAddress: string(app.store.Raft.Leader()), leaseLength: sess.leaseLength}
 	b, err := json.Marshal(response)
