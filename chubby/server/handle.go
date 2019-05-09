@@ -26,18 +26,31 @@ type JoinResponse struct {
 }
 
 
-type ClientRequest struct {
-	clientID	string
-	params 		[]byte
+type initSessionRequest struct {
+	clientID ClientID
 }
 
-type ClientResponse struct {
-	response	[]byte
+type initSessionResponse struct {
+	leaderAddress string
+	leaseLength time.Duration
+}
+
+type keepAliveRequest struct {
+	clientID ClientID
+}
+
+type keepAliveResponse struct {
+	leaseLength time.Duration
 }
 
 type Response struct {
 	leaderAddress string
 	leaseLength time.Duration
+}
+
+type Request struct {
+	mode LockMode
+	path FilePath
 }
 
 // RPC handler type
@@ -59,15 +72,10 @@ func (h *Handler) Join(req JoinRequest, res *JoinResponse) error {
  */
 
 // Initialize a client-server session.
-func (h *Handler) InitSession(req ClientRequest, res *ClientResponse) error {
+func (h *Handler) InitSession(req initSessionRequest, res *initSessionResponse) error {
 	if app.address != string(app.store.Raft.Leader()) {
-		response := &Response{leaderAddress: string(app.store.Raft.Leader()), leaseLength: 0*time.Second}
-		b, err := json.Marshal(response)
-		if err != nil {
-			res.response = b
-		} else {
-			return err
-		}
+		res.leaseLength = 0*time.Second
+		res.leaderAddress = string(app.store.Raft.Leader())
 	}
 	sess, err := CreateSession(ClientID(req.clientID))
 	if err != nil {

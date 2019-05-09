@@ -117,7 +117,7 @@ func (sess *Session) KeepAlive(clientID ClientID) (time.Duration, error) {
 }
 
 // Create the lock if it does not exist.
-func (sess *Session) OpenLock(clientID ClientID, path FilePath) error {
+func (sess *Session) OpenLock(path FilePath) error {
 	if _, ok := app.sessions[sess.clientID]; !ok {
 		return errors.New(fmt.Sprintf("The current session is closed"))
 	}
