@@ -21,8 +21,8 @@ type ClientSession struct {
 	// Record start time
 	startTime			time.Time
 
-	// Local timeout
-	timeout				time.Duration
+	// Local lease length
+	leaseLength				time.Duration
 
 	// Are we in jeopardy right now?
 	jeopardyFlag		bool
@@ -49,7 +49,7 @@ func InitSession(raftAddr string) (*ClientSession, error) {
 	sess := &ClientSession{
 		rpcClient:		  client,
 		startTime:		  time.Now(),
-		timeout:          DefaultLeaseDuration,
+		leaseLength:          DefaultLeaseDuration,
 		jeopardyFlag:     false,
 		jeopardyChan:     nil,
 	}
@@ -88,12 +88,15 @@ func (sess *ClientSession) MonitorSession() {
 		}()
 
 		// Set up timeout
+		durationLeaseOver := time.Until(sess.startTime.Add(sess.leaseLength))
+		durationJeopardyOver := time.Until(sess.startTime.Add(sess.leaseLength + JeopardyDuration))
+
 		select {
 		case resp := <- keepAliveChan:
 			// Process master's response
 			// The master's response should contain a new, extended lease timeout.
 
-		case <- time.After(sess.startTime.Add(sess.timeout).Sub(time.Now())):
+		case <- time.After(durationLeaseOver):
 			// Jeopardy period begins
 			// If no response within local lease timeout, we have to block all RPCs
 			// from the client until the jeopardy period is over.
@@ -106,12 +109,16 @@ func (sess *ClientSession) MonitorSession() {
 			case resp := <- keepAliveChan:
 				// Session is saved! Unblock all the requests
 
-			case <- time.After(sess.startTime.Add(sess.timeout + JeopardyDuration).Sub(time.Now())):
+			case <- time.After(durationJeopardyOver):
 				// Jeopardy period ends -- tear down the session
 
+				close(keepAliveChan)
 				break
 			}
 		}
+
+		// Close the channel.
+		close(keepAliveChan)
 	}
 }
 

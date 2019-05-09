@@ -18,7 +18,7 @@ const (
 	FREE
 )
 
-const defaultTimeToLive = 12
+const DefaultLeaseExt = 12 * time.Second
 
 // Session contains metadata for one Chubby session.
 // For simplicity, we say that each client can only init one session with
@@ -27,17 +27,17 @@ type Session struct {
 	// Client to which this Session corresponds.
 	clientID 		ClientID
 
-	// TimeToLive
-	TTL             int
+	// Start time
+	startTime		time.Time
 
 	// Length of the Lease
-	leaseLength     int
+	leaseLength     time.Duration
 
 	//TTL Lock
-	TTLLock 		sync.Mutex
+	ttlLock 		sync.Mutex
 
 	// Channel used to block Keepalive 
-	TTLchannel 	chan string
+	ttlChannel  	chan string
 
     // A data structure describing which locks the client holds.
     // Maps lock filepath -> Lock struct.
@@ -56,40 +56,45 @@ func CreateSession(clientID ClientID) (*Session, error) {
 	if _, ok := app.sessions[clientID]; ok {
 		return nil, errors.New(fmt.Sprintf("The client already has a session established with the master"))
 	}
-    sess := &Session{
-        clientID:   	clientID,
-        TTL:            defaultTimeToLive,
-        leaseLength:    defaultTimeToLive,
-        TTLchannel:     make(chan string,1),
-        locks:          make(map[FilePath]*Lock),
+
+	// Create new session struct.
+	sess := &Session{
+        clientID:    clientID,
+        startTime:   time.Now(),
+        leaseLength: DefaultLeaseExt,
+        ttlChannel:  make(chan string,1),
+        locks:       make(map[FilePath]*Lock),
     }
-    go func(sess *Session) {
-		ticker := time.Tick(time.Second)
-		for  range ticker {
-			if sess.TTL <= 2 {
-				// Trigger KeepAlive response 2 seconds before timeout
-				sess.TTLchannel <- "Ready"
-			}
-			if sess.TTL > 0 {
-				// Decrement TTL
-				sess.TTLLock.Lock()
-				sess.TTL = sess.TTL - 1
-				sess.TTLLock.Unlock()
-			} else {
-				// TTL expired: destroy the session
-				DestroySession(clientID, sess)
-				return
-			}	
-		}
-	}(sess)
+
+	// Add the session to the sessions map.
+	app.sessions[clientID] = sess
+
+	// In a separate goroutine, periodically check if the lease is over
+    go sess.MonitorSession()
+
     app.sessions[clientID] = sess
     return sess, nil
 }
 
-func  DestroySession(clientID ClientID, sess *Session) (error) {
-	delete(app.sessions,clientID)
-	sess = nil
-	return nil
+func (sess *Session) MonitorSession() {
+	// At each second, check time until the lease is over.
+	ticker := time.Tick(time.Second)
+	for range ticker {
+		durationLeaseOver := time.Until(sess.startTime.Add(leaseLength))
+		if durationLeaseOver <= (2 * time.Second) {
+			// Trigger KeepAlive response 2 seconds before timeout
+			sess.ttlChannel <- "Ready"
+		}
+		if durationLeaseOver <= 0 {
+			// Lease expired: destroy the session
+			sess.DestroySession()
+			return
+		}
+	}
+}
+
+func (sess *Session) DestroySession() {
+	delete(app.sessions, sess.clientID)
 }
 
 // Create the lock if it does not exist.
@@ -118,14 +123,17 @@ func (sess *Session) OpenLock(clientID ClientID, path FilePath) error {
 }
 
 // Extend Lease after receiving keepalive messages
-func (sess *Session) KeepAlive(clientID ClientID) error {
+func (sess *Session) KeepAlive(clientID ClientID) (time.Duration, error) {
 	if _, ok := app.sessions[sess.clientID]; !ok {
-		return errors.New(fmt.Sprintf("The current session is closed"))
+		return 0, errors.New(fmt.Sprintf("The current session is closed"))
 	}
-	<- sess.TTLchannel
-	sess.TTL = defaultTimeToLive
-	sess.leaseLength = sess.leaseLength + defaultTimeToLive
-	return nil
+	// Block until shortly before lease expires
+	<- sess.ttlChannel
+	// Extend lease by 12 seconds
+	sess.leaseLength = sess.leaseLength + DefaultLeaseExt
+
+	// Return new lease length.
+	return sess.leaseLength, nil
 }
 
 // Delete the lock. Lock must be held in exclusive mode before calling DeleteLock.
