@@ -7,11 +7,7 @@ COPY . .
 RUN go get -d -v ./...
 
 # Build executable
-RUN go build -o bin/chubby chubby/cmd/*.go
+RUN go build -o bin/simple_client cmd/simple_client.go
 
-# Expose ports
-EXPOSE 5379
-EXPOSE 15379    
-
-# Run chubby exec
-CMD ["bin/chubby", "-id", "id1"]
+# Run simple_client exec
+CMD ["bin/simple_client"]

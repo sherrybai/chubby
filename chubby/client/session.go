@@ -104,6 +104,7 @@ func InitSession(clientID ClientID, serverAddr string) (*ClientSession, error) {
 }
 
 func (sess *ClientSession) MonitorSession() {
+	sess.logger.Printf("Monitoring session with server %s", sess.serverAddr)
 	for {
 		// Make new keepAlive channel.
 		// This should be ok because this loop only occurs every 12 seconds to 57 seconds.

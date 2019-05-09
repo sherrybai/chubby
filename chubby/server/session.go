@@ -68,7 +68,7 @@ func CreateSession(clientID ClientID) (*Session, error) {
         clientID:    clientID,
         startTime:   time.Now(),
         leaseLength: DefaultLeaseExt,
-        ttlChannel:  make(chan string,1),
+        ttlChannel:  make(chan string,2),
         locks:       make(map[FilePath]*Lock),
         terminated:	 false,
     }
@@ -83,15 +83,23 @@ func CreateSession(clientID ClientID) (*Session, error) {
 }
 
 func (sess *Session) MonitorSession() {
+	app.logger.Printf("Monitoring session with client %s", sess.clientID)
+
 	// At each second, check time until the lease is over.
 	ticker := time.Tick(time.Second)
 	for range ticker {
-		durationLeaseOver := time.Until(sess.startTime.Add(sess.leaseLength))
-		if durationLeaseOver <= (2 * time.Second) {
-			// Trigger KeepAlive response 2 seconds before timeout
+		timeLeaseOver := sess.startTime.Add(sess.leaseLength)
+
+		var durationLeaseOver time.Duration = 0
+		if timeLeaseOver.After(time.Now()) {
+			durationLeaseOver = time.Until(timeLeaseOver)
+		}
+
+		if durationLeaseOver <= (1 * time.Second) {
+			// Trigger KeepAlive response 1 second before timeout
 			sess.ttlChannel <- "Ready"
 		}
-		if durationLeaseOver <= 0 {
+		if durationLeaseOver == 0 {
 			// Lease expired: terminate the session
 			sess.TerminateSession()
 			return
