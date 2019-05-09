@@ -46,12 +46,11 @@ type command struct {
 type Store struct {
 	RaftDir		string       		// Raft storage directory
 	RaftBind	string       		// Raft bind address
+	Raft		*raft.Raft   		// Raft instance
 	inmem 		bool         		// Whether storage is in-memory
 
 	mu			sync.Mutex   		// Lock for synchronizing API operations
 	m			map[string]string	// Key-value store for the system
-
-	raft		*raft.Raft   		// Raft instance
 
 	logger		*log.Logger  		// Logger
 }

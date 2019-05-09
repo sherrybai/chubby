@@ -2,7 +2,13 @@
 
 package server
 
-import "errors"
+import (
+	"errors"
+	"encoding/json"
+	"fmt"
+	"runtime"
+	"time"
+)
 
 var (
 	ErrParams        = errors.New("ERR params invalid")
@@ -29,6 +35,11 @@ type ClientResponse struct {
 	response	[]byte
 }
 
+type Response struct {
+	leaderAddress string
+	leaseLength time.Duration
+}
+
 // RPC handler type
 type Handler int
 
@@ -49,14 +60,41 @@ func (h *Handler) Join(req JoinRequest, res *JoinResponse) error {
 
 // Initialize a client-server session.
 func (h *Handler) InitSession(req ClientRequest, res *ClientResponse) error {
+	if app.address != string(app.store.Raft.Leader()) {
+		response := &Response{leaderAddress: string(app.store.Raft.Leader()), leaseLength: 0*time.Second}
+		b, err := json.Marshal(response)
+		if err != nil {
+			res.response = b
+		} else {
+			return err
+		}
+	}
 	sess, err := CreateSession(ClientID(req.clientID))
-
-
+	if err != nil {
+		return nil
+	}
+	response := &Response{leaderAddress: string(app.store.Raft.Leader()), leaseLength: sess.leaseLength}
+	b, err := json.Marshal(response)
+	if err != nil {
+		res.response = b
+	} else {
+		return err
+	}
+	return nil
 }
 
 // KeepAlive calls allow the client to extend the Chubby session.
-func (h *Handler) KeepAlive(req ClientRequest, res *ClientResponse) error {
-
+func (h *Handler) HandleKeepAlive(req ClientRequest, res *ClientResponse) error {
+	session := app.sessions[ClientID(req.clientID)]
+	duration, _ := session.KeepAlive(ClientID(req.clientID))
+	response := &Response{leaderAddress: string(app.store.Raft.Leader()), leaseLength: duration}
+	b, err := json.Marshal(response)
+	if err != nil {
+		res.response = b
+	} else {
+		return err
+	}
+	return nil
 }
 
 // Chubby API methods for handling locks.

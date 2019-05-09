@@ -36,6 +36,9 @@ type App struct {
 
 	logger *log.Logger
 
+	// Current Node's Address
+	address string
+
 	// In-memory struct of handles.
 	// Maps handle IDs to handle metadata.
 	// handles map[int]Handle
@@ -62,6 +65,8 @@ func Run(conf *config.Config) {
 
 	// Create a new store.
 	app.store = store.New(conf.RaftDir, conf.RaftBind, conf.InMem)
+
+	app.address = conf.Listen
 
 	//// Initialize a map
 	//app.handles = make(map[int]Handle)
