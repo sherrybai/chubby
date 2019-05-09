@@ -7,7 +7,7 @@ COPY . .
 RUN go get -d -v ./...
 
 # Build executable
-RUN go build -o bin/chubby chubby/cmd/*.go
+RUN go build -o bin/chubby chubby/cmd/main.go
 
 # Run chubby exec
 # Default ports: listen on :5379, raftbind :15379

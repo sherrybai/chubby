@@ -18,26 +18,26 @@ type JoinRequest struct {
 }
 
 type JoinResponse struct {
-	error error
+	Error error
 }
 
-
 type InitSessionRequest struct {
-	clientID ClientID
+	ClientID ClientID
 }
 
 type InitSessionResponse struct {
-	leaderAddress string
-	isLeader bool
+	LeaderAddress string
 }
 
 type KeepAliveRequest struct {
-	clientID ClientID
+	ClientID ClientID
 }
 
 type KeepAliveResponse struct {
-	leaseLength time.Duration
+	LeaseLength time.Duration
 }
+
+// TODO: make all fields exported
 
 type OpenLockRequest struct {
 	clientID ClientID
@@ -86,7 +86,7 @@ type Handler int
 // Join the caller server to our server.
 func (h *Handler) Join(req JoinRequest, res *JoinResponse) error {
 	err := app.store.Join(req.NodeID, req.RaftAddr)
-	res.error = err
+	res.Error = err
 	return err
 }
 
@@ -97,16 +97,14 @@ func (h *Handler) Join(req JoinRequest, res *JoinResponse) error {
 // Initialize a client-server session.
 func (h *Handler) InitSession(req InitSessionRequest, res *InitSessionResponse) error {
 	if app.address != string(app.store.Raft.Leader()) {
-		res.isLeader = false
-		res.leaderAddress = string(app.store.Raft.Leader())
+		res.LeaderAddress = string(app.store.Raft.Leader())
 		return nil
 	}
-	_, err := CreateSession(ClientID(req.clientID))
+	_, err := CreateSession(ClientID(req.ClientID))
 	if err != nil {
 		return err
 	}
-	res.isLeader = true
-	res.leaderAddress = string(app.store.Raft.Leader())
+	res.LeaderAddress = app.address
 	return nil
 }
 
@@ -118,16 +116,16 @@ func (h *Handler) KeepAlive(req KeepAliveRequest, res *KeepAliveResponse) error 
 	}
 
 	// TODO: change this to handle failovers
-	sess, ok := app.sessions[req.clientID]
+	sess, ok := app.sessions[req.ClientID]
 	if !ok {
-		return errors.New(fmt.Sprintf("No session exists for %s", req.clientID))
+		return errors.New(fmt.Sprintf("No session exists for %s", req.ClientID))
 	}
 
-	duration, err := sess.KeepAlive(req.clientID)
+	duration, err := sess.KeepAlive(req.ClientID)
 	if err != nil {
 		return err
 	}
-	res.leaseLength = duration
+	res.LeaseLength = duration
 	return nil
 }
 

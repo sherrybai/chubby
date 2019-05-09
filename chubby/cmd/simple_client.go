@@ -17,6 +17,8 @@ var (
 
 const DefaultServerAddr = ":5379"
 
+var ServerAddrs = [...]string {":5379", ":6379", ":7379", ":8379", ":9379"}
+
 func init() {
 	flag.StringVar(&clientID, "clientID", "simple_client_1", "ID of this client")
 }

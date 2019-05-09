@@ -10,20 +10,19 @@ import (
 type ClientID string
 
 type InitSessionRequest struct {
-	clientID ClientID
+	ClientID ClientID
 }
 
 type InitSessionResponse struct {
-	leaderAddress string
-	isLeader bool
+	LeaderAddress string
 }
 
 type KeepAliveRequest struct {
-	clientID ClientID
+	ClientID ClientID
 }
 
 type KeepAliveResponse struct {
-	leaseLength time.Duration
+	LeaseLength time.Duration
 }
 
 type ClientSession struct {
@@ -85,7 +84,7 @@ func InitSession(clientID ClientID, serverAddr string) (*ClientSession, error) {
 	defer rpcClient.Close()
 
 	// Make RPC call.
-	req := InitSessionRequest{clientID: clientID}
+	req := InitSessionRequest{ClientID: clientID}
 	resp := &InitSessionResponse{}
 	err = rpcClient.Call("Handler.InitSession", req, resp)
 	if err != nil {
@@ -94,9 +93,9 @@ func InitSession(clientID ClientID, serverAddr string) (*ClientSession, error) {
 
 	// If the response is that the node at the address is not the leader,
 	// try to send an InitSession to the leader.
-	if !resp.isLeader {
-		sess.logger.Printf("%s is not leader: calling InitSession to server %s", serverAddr, resp.leaderAddress)
-		return InitSession(clientID, resp.leaderAddress)
+	if resp.LeaderAddress != serverAddr {
+		sess.logger.Printf("%s is not leader: calling InitSession to server %s", serverAddr, resp.LeaderAddress)
+		return InitSession(clientID, resp.LeaderAddress)
 	}
 
 	// Call MonitorSession.
@@ -113,7 +112,7 @@ func (sess *ClientSession) MonitorSession() {
 
 		// Send a KeepAlive, waiting for a response from the master.
 		go func() {
-			req := KeepAliveRequest{clientID: sess.clientID}
+			req := KeepAliveRequest{ClientID: sess.clientID}
 			resp := &KeepAliveResponse{}
 			err := sess.rpcClient.Call("Handler.KeepAlive", req, resp)
 			if err != nil {
@@ -135,10 +134,10 @@ func (sess *ClientSession) MonitorSession() {
 			sess.logger.Printf("session with %s received within lease timeout", sess.serverAddr)
 
 			// Adjust new lease length.
-			if (sess.leaseLength >= resp.leaseLength) {
+			if (sess.leaseLength >= resp.LeaseLength) {
 				sess.logger.Printf("WARNING: new lease length shorter than current lease length")
 			}
-			sess.leaseLength = resp.leaseLength
+			sess.leaseLength = resp.LeaseLength
 
 		case <- time.After(durationLeaseOver):
 			// Jeopardy period begins
@@ -162,10 +161,10 @@ func (sess *ClientSession) MonitorSession() {
 
 				// Process master's response
 				// Adjust new lease length.
-				if (sess.leaseLength >= resp.leaseLength) {
+				if (sess.leaseLength >= resp.LeaseLength) {
 					sess.logger.Printf("WARNING: new lease length shorter than current lease length")
 				}
-				sess.leaseLength = resp.leaseLength
+				sess.leaseLength = resp.LeaseLength
 
 			case <- time.After(durationJeopardyOver):
 				// Jeopardy period ends -- tear down the session

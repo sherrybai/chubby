@@ -7,7 +7,7 @@ COPY . .
 RUN go get -d -v ./...
 
 # Build executable
-RUN go build -o bin/chubby chubby/cmd/*.go
+RUN go build -o bin/chubby chubby/cmd/main.go
 
 # Run chubby exec
 CMD ["bin/chubby", "-id", "node2", "-listen", ":6379", "-raftbind", ":16379", "-join", "localhost:5379"]

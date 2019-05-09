@@ -97,7 +97,7 @@ func Run(conf *config.Config) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if resp.error != nil {
+		if resp.Error != nil {
 			log.Fatal(err)
 		}
 	}
