@@ -5,6 +5,10 @@ services:
             context: .
             dockerfile: Dockerfile.node1
         network_mode: host
+        healthcheck:
+            # Wait 5 seconds for node1 to elect itself leader
+            # There's probably a better way to do this lol
+            test: ["CMD", "./sleep.sh"]
     node2:
         build:
             context: .

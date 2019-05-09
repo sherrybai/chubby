@@ -81,7 +81,6 @@ func InitSession(clientID ClientID, serverAddr string) (*ClientSession, error) {
 		return nil, err
 	}
 	sess.rpcClient = rpcClient
-	defer rpcClient.Close()
 
 	// Make RPC call.
 	req := InitSessionRequest{ClientID: clientID}
@@ -116,7 +115,7 @@ func (sess *ClientSession) MonitorSession() {
 			resp := &KeepAliveResponse{}
 			err := sess.rpcClient.Call("Handler.KeepAlive", req, resp)
 			if err != nil {
-				sess.logger.Printf("rpc dial error: %s", err.Error())
+				sess.logger.Printf("rpc call error: %s", err.Error())
 				return  // do not push anything onto channel -- session will time out
 			}
 
@@ -131,7 +130,7 @@ func (sess *ClientSession) MonitorSession() {
 		case resp := <- keepAliveChan:
 			// Process master's response
 			// The master's response should contain a new, extended lease timeout.
-			sess.logger.Printf("session with %s received within lease timeout", sess.serverAddr)
+			sess.logger.Printf("KeepAlive response from %s received within lease timeout", sess.serverAddr)
 
 			// Adjust new lease length.
 			if (sess.leaseLength >= resp.LeaseLength) {
@@ -170,8 +169,12 @@ func (sess *ClientSession) MonitorSession() {
 				// Jeopardy period ends -- tear down the session
 				sess.expired = true
 				close(keepAliveChan)
+				err := sess.rpcClient.Close()
+				if err != nil {
+					sess.logger.Printf("rpc close error: %s", err.Error())
+				}
 				sess.logger.Printf("session with %s expired", sess.serverAddr)
-				break
+				return
 			}
 		}
 

@@ -56,12 +56,15 @@ type Lock struct {
 
 /* Create Session struct. */
 func CreateSession(clientID ClientID) (*Session, error) {
-	if _, ok := app.sessions[clientID]; ok {
+	sess, ok := app.sessions[clientID]
+	if ok && !sess.terminated {
 		return nil, errors.New(fmt.Sprintf("The client already has a session established with the master"))
 	}
 
+	app.logger.Printf("Creating session with client %s", clientID)
+
 	// Create new session struct.
-	sess := &Session{
+	sess = &Session{
         clientID:    clientID,
         startTime:   time.Now(),
         leaseLength: DefaultLeaseExt,
@@ -76,7 +79,6 @@ func CreateSession(clientID ClientID) (*Session, error) {
 	// In a separate goroutine, periodically check if the lease is over
     go sess.MonitorSession()
 
-    app.sessions[clientID] = sess
     return sess, nil
 }
 
@@ -116,7 +118,10 @@ func (sess *Session) KeepAlive(clientID ClientID) (time.Duration, error) {
 	// Extend lease by 12 seconds
 	sess.leaseLength = sess.leaseLength + DefaultLeaseExt
 
-	app.logger.Printf("session with client %s extended: lease length %d", sess.clientID, sess.leaseLength)
+	app.logger.Printf(
+		"session with client %s extended: lease length %s",
+		sess.clientID,
+		sess.leaseLength.String())
 
 	// Return new lease length.
 	return sess.leaseLength, nil

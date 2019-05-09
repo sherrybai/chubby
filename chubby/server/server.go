@@ -58,18 +58,13 @@ func Run(conf *config.Config) {
 	var err error
 
 	// Init app struct.
-	app = &App{}
-
-	// Create a new logger.
-	app.logger = log.New(os.Stderr, "[server] ", log.LstdFlags)
-
-	// Create a new store.
-	app.store = store.New(conf.RaftDir, conf.RaftBind, conf.InMem)
-
-	app.address = conf.Listen
-
-	//// Initialize a map
-	//app.handles = make(map[int]Handle)
+	app = &App{
+		logger:		log.New(os.Stderr, "[server] ", log.LstdFlags),
+		store:		store.New(conf.RaftDir, conf.RaftBind, conf.InMem),
+		address: 	conf.Listen,
+		locks:		make(map[FilePath]*Lock),
+		sessions:	make(map[ClientID]*Session),
+	}
 
 	// Open the store.
 	bootstrap := conf.Join == ""

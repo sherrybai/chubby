@@ -96,10 +96,10 @@ func (h *Handler) Join(req JoinRequest, res *JoinResponse) error {
 
 // Initialize a client-server session.
 func (h *Handler) InitSession(req InitSessionRequest, res *InitSessionResponse) error {
-	if app.address != string(app.store.Raft.Leader()) {
-		res.LeaderAddress = string(app.store.Raft.Leader())
-		return nil
-	}
+	//if app.address != string(app.store.Raft.Leader()) {
+	//	res.LeaderAddress = string(app.store.Raft.Leader())
+	//	return nil
+	//}
 	_, err := CreateSession(ClientID(req.ClientID))
 	if err != nil {
 		return err
@@ -110,10 +110,10 @@ func (h *Handler) InitSession(req InitSessionRequest, res *InitSessionResponse) 
 
 // KeepAlive calls allow the client to extend the Chubby session.
 func (h *Handler) KeepAlive(req KeepAliveRequest, res *KeepAliveResponse) error {
-	// If a non-leader node receives a KeepAlive, return error
-	if app.address != string(app.store.Raft.Leader()) {
-		return errors.New(fmt.Sprintf("Node %s is not the leader", app.address))
-	}
+	//// If a non-leader node receives a KeepAlive, return error
+	//if app.address != string(app.store.Raft.Leader()) {
+	//	return errors.New(fmt.Sprintf("Node %s is not the leader", app.address))
+	//}
 
 	// TODO: change this to handle failovers
 	sess, ok := app.sessions[req.ClientID]
