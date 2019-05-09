@@ -1,7 +1,9 @@
 package client
 
 import (
+	"log"
 	"net/rpc"
+	"os"
 	"time"
 )
 
@@ -15,6 +17,9 @@ type ClientResponse struct {
 }
 
 type ClientSession struct {
+	// Server address
+	serverAddr			string
+
 	// RPC client
 	rpcClient			*rpc.Client
 
@@ -28,7 +33,13 @@ type ClientSession struct {
 	jeopardyFlag		bool
 
 	// Channel for notifying if jeopardy has ended
-	jeopardyChan		chan struct{}
+	jeopardyChan		chan bool
+
+	// Did this session expire?
+	expired				bool
+
+	// Logger
+	logger				*log.Logger
 }
 
 const DefaultLeaseDuration time.Duration = 12 * time.Second
@@ -36,23 +47,26 @@ const JeopardyDuration time.Duration = 45 * time.Second
 
 // Set up a Chubby session and periodically send KeepAlives to the server.
 // This method should be run as a new goroutine by the client.
-func InitSession(raftAddr string) (*ClientSession, error) {
-	// Set up TCP connection to raftAddr.
-	client, err := rpc.Dial("tcp", raftAddr)
+func InitSession(serverAddr string) (*ClientSession, error) {
+	// Set up TCP connection to serverAddr.
+	client, err := rpc.Dial("tcp", serverAddr)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: log here
-
 	// Initialize a session.
 	sess := &ClientSession{
+		serverAddr:		  serverAddr,
 		rpcClient:		  client,
 		startTime:		  time.Now(),
-		leaseLength:          DefaultLeaseDuration,
+		leaseLength:      DefaultLeaseDuration,
 		jeopardyFlag:     false,
 		jeopardyChan:     nil,
+		expired:		  false,
+		logger:			  log.New(os.Stderr, "[client] ", log.LstdFlags),
 	}
+
+	sess.logger.Printf("session with %s initialized", serverAddr)
 
 	// TODO: fill out req/resp
 	req := ClientRequest{}
@@ -95,24 +109,32 @@ func (sess *ClientSession) MonitorSession() {
 		case resp := <- keepAliveChan:
 			// Process master's response
 			// The master's response should contain a new, extended lease timeout.
+			sess.logger.Printf("session with %s received within lease timeout", sess.serverAddr)
+
 
 		case <- time.After(durationLeaseOver):
 			// Jeopardy period begins
 			// If no response within local lease timeout, we have to block all RPCs
 			// from the client until the jeopardy period is over.
-
-			// Master response should give time since startTime until timeout occurs.
-			// For example: extends timeout from 12s to 24s
+			sess.jeopardyFlag = true
+			sess.logger.Printf("session with %s in jeopardy", sess.serverAddr)
 
 			// Keep waiting for the response
 			select {
 			case resp := <- keepAliveChan:
 				// Session is saved! Unblock all the requests
+				sess.jeopardyFlag = false
+				sess.jeopardyChan <- sess.jeopardyFlag
+				sess.logger.Printf("session with %s safe", sess.serverAddr)
+
+				// Process master's response
+
 
 			case <- time.After(durationJeopardyOver):
 				// Jeopardy period ends -- tear down the session
-
+				sess.expired = true
 				close(keepAliveChan)
+				sess.logger.Printf("session with %s expired", sess.serverAddr)
 				break
 			}
 		}

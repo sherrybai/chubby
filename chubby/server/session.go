@@ -93,8 +93,27 @@ func (sess *Session) MonitorSession() {
 	}
 }
 
+// Destroy the session.
 func (sess *Session) DestroySession() {
 	delete(app.sessions, sess.clientID)
+
+	app.logger.Printf("destroyed session with client %s", sess.clientID)
+}
+
+// Extend Lease after receiving keepalive messages
+func (sess *Session) KeepAlive(clientID ClientID) (time.Duration, error) {
+	if _, ok := app.sessions[sess.clientID]; !ok {
+		return 0, errors.New(fmt.Sprintf("The current session is closed"))
+	}
+	// Block until shortly before lease expires
+	<- sess.ttlChannel
+	// Extend lease by 12 seconds
+	sess.leaseLength = sess.leaseLength + DefaultLeaseExt
+
+	app.logger.Printf("session with client %s extended: lease length %d", sess.clientID, sess.leaseLength)
+
+	// Return new lease length.
+	return sess.leaseLength, nil
 }
 
 // Create the lock if it does not exist.
@@ -120,20 +139,6 @@ func (sess *Session) OpenLock(clientID ClientID, path FilePath) error {
 	}
 
 	return nil
-}
-
-// Extend Lease after receiving keepalive messages
-func (sess *Session) KeepAlive(clientID ClientID) (time.Duration, error) {
-	if _, ok := app.sessions[sess.clientID]; !ok {
-		return 0, errors.New(fmt.Sprintf("The current session is closed"))
-	}
-	// Block until shortly before lease expires
-	<- sess.ttlChannel
-	// Extend lease by 12 seconds
-	sess.leaseLength = sess.leaseLength + DefaultLeaseExt
-
-	// Return new lease length.
-	return sess.leaseLength, nil
 }
 
 // Delete the lock. Lock must be held in exclusive mode before calling DeleteLock.
