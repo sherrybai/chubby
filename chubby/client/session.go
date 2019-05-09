@@ -5,29 +5,12 @@ import (
 	"net/rpc"
 	"os"
 	"time"
+	"cos518project/chubby/api"
 )
-
-type ClientID string
-
-type InitSessionRequest struct {
-	ClientID ClientID
-}
-
-type InitSessionResponse struct {
-	LeaderAddress string
-}
-
-type KeepAliveRequest struct {
-	ClientID ClientID
-}
-
-type KeepAliveResponse struct {
-	LeaseLength time.Duration
-}
 
 type ClientSession struct {
 	// Client ID
-	clientID			ClientID
+	clientID			api.ClientID
 
 	// Server address
 	serverAddr			string
@@ -59,7 +42,7 @@ const JeopardyDuration time.Duration = 45 * time.Second
 
 // Set up a Chubby session and periodically send KeepAlives to the server.
 // This method should be run as a new goroutine by the client.
-func InitSession(clientID ClientID, serverAddr string) (*ClientSession, error) {
+func InitSession(clientID api.ClientID, serverAddr string) (*ClientSession, error) {
 	// Initialize a session.
 	sess := &ClientSession{
 		clientID:     clientID,
@@ -83,8 +66,8 @@ func InitSession(clientID ClientID, serverAddr string) (*ClientSession, error) {
 	sess.rpcClient = rpcClient
 
 	// Make RPC call.
-	req := InitSessionRequest{ClientID: clientID}
-	resp := &InitSessionResponse{}
+	req := api.InitSessionRequest{ClientID: clientID}
+	resp := &api.InitSessionResponse{}
 	err = rpcClient.Call("Handler.InitSession", req, resp)
 	if err != nil {
 		return nil, err
@@ -108,12 +91,12 @@ func (sess *ClientSession) MonitorSession() {
 	for {
 		// Make new keepAlive channel.
 		// This should be ok because this loop only occurs every 12 seconds to 57 seconds.
-		keepAliveChan := make(chan *KeepAliveResponse, 1)
+		keepAliveChan := make(chan *api.KeepAliveResponse, 1)
 
 		// Send a KeepAlive, waiting for a response from the master.
 		go func() {
-			req := KeepAliveRequest{ClientID: sess.clientID}
-			resp := &KeepAliveResponse{}
+			req := api.KeepAliveRequest{ClientID: sess.clientID}
+			resp := &api.KeepAliveResponse{}
 			err := sess.rpcClient.Call("Handler.KeepAlive", req, resp)
 			if err != nil {
 				sess.logger.Printf("rpc call error: %s", err.Error())

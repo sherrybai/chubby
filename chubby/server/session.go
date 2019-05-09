@@ -8,14 +8,7 @@ import (
 	"fmt"
 	"sync"
 	"time"
-)
-
-// Mode of a lock
-type LockMode	int
-const (
-	EXCLUSIVE LockMode = iota
-	SHARED
-	FREE
+	"cos518project/chubby/api"
 )
 
 const DefaultLeaseExt = 12 * time.Second
@@ -25,7 +18,7 @@ const DefaultLeaseExt = 12 * time.Second
 // the Chubby servers.
 type Session struct {
 	// Client to which this Session corresponds.
-	clientID 		ClientID
+	clientID 		api.ClientID
 
 	// Start time
 	startTime		time.Time
@@ -41,7 +34,7 @@ type Session struct {
 
     // A data structure describing which locks the client holds.
     // Maps lock filepath -> Lock struct.
-    locks           map[FilePath]*Lock
+    locks           map[api.FilePath]*Lock
 
 	// Did we terminate this session?
 	terminated		bool
@@ -49,13 +42,13 @@ type Session struct {
 
 // Lock describes information about a particular Chubby lock.
 type Lock struct {
-	path			FilePath  // The path to this lock in the store.
-	mode			LockMode  // Shared or exclusive lock?
-	owners			map[ClientID]bool  // Who is holding the lock?
+	path			api.FilePath  // The path to this lock in the store.
+	mode			api.LockMode  // api.SHARED or exclusive lock?
+	owners			map[api.ClientID]bool  // Who is holding the lock?
 }
 
 /* Create Session struct. */
-func CreateSession(clientID ClientID) (*Session, error) {
+func CreateSession(clientID api.ClientID) (*Session, error) {
 	sess, ok := app.sessions[clientID]
 	if ok && !sess.terminated {
 		return nil, errors.New(fmt.Sprintf("The client already has a session established with the master"))
@@ -69,7 +62,7 @@ func CreateSession(clientID ClientID) (*Session, error) {
         startTime:   time.Now(),
         leaseLength: DefaultLeaseExt,
         ttlChannel:  make(chan string,2),
-        locks:       make(map[FilePath]*Lock),
+        locks:       make(map[api.FilePath]*Lock),
         terminated:	 false,
     }
 
@@ -120,7 +113,7 @@ func (sess *Session) TerminateSession() {
 }
 
 // Extend Lease after receiving keepalive messages
-func (sess *Session) KeepAlive(clientID ClientID) (time.Duration, error) {
+func (sess *Session) KeepAlive(clientID api.ClientID) (time.Duration, error) {
 	// Block until shortly before lease expires
 	<- sess.ttlChannel
 	// Extend lease by 12 seconds
@@ -136,7 +129,7 @@ func (sess *Session) KeepAlive(clientID ClientID) (time.Duration, error) {
 }
 
 // Create the lock if it does not exist.
-func (sess *Session) OpenLock(path FilePath) error {
+func (sess *Session) OpenLock(path api.FilePath) error {
 	// Check if lock exists in persistent store
 	_, err := app.store.Get(string(path))
 	if err != nil {
@@ -149,8 +142,8 @@ func (sess *Session) OpenLock(path FilePath) error {
 		// Add lock to in-memory struct of locks
 		app.locks[path] = &Lock{
 			path: path,
-			mode: FREE,
-			owners: make(map[ClientID]bool),
+			mode: api.FREE,
+			owners: make(map[api.ClientID]bool),
 		}
 	}
 
@@ -158,7 +151,7 @@ func (sess *Session) OpenLock(path FilePath) error {
 }
 
 // Delete the lock. Lock must be held in exclusive mode before calling DeleteLock.
-func (sess *Session) DeleteLock(path FilePath) error {
+func (sess *Session) DeleteLock(path api.FilePath) error {
 	// If we are not holding the lock, we cannot delete it.
 	lock, exists := sess.locks[path]
 	if !exists {
@@ -166,7 +159,7 @@ func (sess *Session) DeleteLock(path FilePath) error {
 	}
 
 	// Check if we are holding the lock in exclusive mode
-	if lock.mode != EXCLUSIVE {
+	if lock.mode != api.EXCLUSIVE {
 		return errors.New(fmt.Sprintf("Client does not hold the lock at path %s in exclusive mode", path))
 	}
 
@@ -189,9 +182,9 @@ func (sess *Session) DeleteLock(path FilePath) error {
 }
 
 // Try to acquire the lock, returning either success (true) or failure (false).
-func (sess *Session) TryAcquireLock (path FilePath, mode LockMode) (bool, error) {
+func (sess *Session) TryAcquireLock (path api.FilePath, mode api.LockMode) (bool, error) {
 	// Validate mode of the lock.
-	if mode != EXCLUSIVE && mode != SHARED {
+	if mode != api.EXCLUSIVE && mode != api.SHARED {
 		return false, errors.New(fmt.Sprintf("Invalid mode."))
 	}
 
@@ -216,31 +209,31 @@ func (sess *Session) TryAcquireLock (path FilePath, mode LockMode) (bool, error)
 		// TODO: check if this is correct?
 		app.locks[path] = &Lock{
 			path: path,
-			mode: FREE,
-			owners: make(map[ClientID]bool),
+			mode: api.FREE,
+			owners: make(map[api.ClientID]bool),
 		}
 		lock = app.locks[path]
 	}
 
 	// Check the mode of the lock
 	switch lock.mode {
-	case EXCLUSIVE:
+	case api.EXCLUSIVE:
 		// Should fail: someone probably already owns the lock
 		if len(lock.owners) == 0 {
-			// Throw an error if there are no owners but lock.mode is exclusive:
+			// Throw an error if there are no owners but lock.mode is api.EXCLUSIVE:
 			// this means ReleaseLock was not implemented correctly
-			return false, errors.New("Lock has EXCLUSIVE mode despite having no owners")
+			return false, errors.New("Lock has api.EXCLUSIVE mode despite having no owners")
 		} else if len(lock.owners) > 1 {
-			return false, errors.New("Lock has EXCLUSIVE mode but has multiple owners")
+			return false, errors.New("Lock has api.EXCLUSIVE mode but has multiple owners")
 		} else {
 			// Fail with no error
 			return false, nil
 		}
-	case SHARED:
-		// If our mode is shared, then succeed; else fail
-		if mode == EXCLUSIVE {
+	case api.SHARED:
+		// If our mode is api.SHARED, then succeed; else fail
+		if mode == api.EXCLUSIVE {
 			return false, nil
-		} else {  // mode == SHARED
+		} else {  // mode == api.SHARED
 			// Update lock owners
 			lock.owners[sess.clientID] = true
 
@@ -250,7 +243,7 @@ func (sess *Session) TryAcquireLock (path FilePath, mode LockMode) (bool, error)
 			// Return success
 			return true, nil
 		}
-	case FREE:
+	case api.FREE:
 		// If lock has owners, either TryAcquireLock or ReleaseLock was not implemented correctly
 		if len(lock.owners) > 0 {
 			return false, errors.New("Lock has FREE mode but is owned by 1 or more clients")
@@ -274,7 +267,7 @@ func (sess *Session) TryAcquireLock (path FilePath, mode LockMode) (bool, error)
 }
 
 // Release the lock.
-func (sess *Session) ReleaseLock (path FilePath) (error) {
+func (sess *Session) ReleaseLock (path api.FilePath) (error) {
 	// Check if lock exists in persistent store
 	_, err := app.store.Get(string(path))
 
@@ -298,28 +291,28 @@ func (sess *Session) ReleaseLock (path FilePath) (error) {
 
 	// Switch on lock mode.
 	switch lock.mode {
-	case FREE:
+	case api.FREE:
 		// Throw an error: this means TryAcquire was not implemented correctly
 		return errors.New("Lock has FREE mode: acquire not implemented correctly")
-	case EXCLUSIVE:
+	case api.EXCLUSIVE:
 		// Delete from lock owners
 		delete(lock.owners, sess.clientID)
 
 		// Set lock mode
-		lock.mode = FREE
+		lock.mode = api.FREE
 
 		// Delete lock from session locks map
 		delete(sess.locks, path)
 
 		// Return without error
 		return nil
-	case SHARED:
+	case api.SHARED:
 		// Delete from lock owners
 		delete(lock.owners, sess.clientID)
 
 		// Set lock mode if no more owners
 		if len(lock.owners) == 1 {
-			lock.mode = FREE
+			lock.mode = api.FREE
 		}
 
 		// Delete lock from session locks map

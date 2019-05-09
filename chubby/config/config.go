@@ -1,3 +1,5 @@
+// Configuration for a Raft node.
+//
 // Adapted from leto config file:
 // https://github.com/yongman/leto/blob/master/config/config.go
 

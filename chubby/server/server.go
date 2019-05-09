@@ -18,15 +18,13 @@ package server
 import (
 	"cos518project/chubby/config"
 	"cos518project/chubby/store"
+	"cos518project/chubby/api"
 	"fmt"
 	"log"
 	"net"
 	"net/rpc"
 	"os"
 )
-
-type ClientID string
-type FilePath 	string
 
 type App struct {
 	listener net.Listener
@@ -45,10 +43,10 @@ type App struct {
 
 	// In-memory struct of locks.
 	// Maps filepaths to Lock structs.
-	locks map[FilePath]*Lock
+	locks map[api.FilePath]*Lock
 
 	// In-memory struct of sessions.
-	sessions map[ClientID]*Session
+	sessions map[api.ClientID]*Session
 }
 
 // No choice but to make this variable package-level :(
@@ -62,8 +60,8 @@ func Run(conf *config.Config) {
 		logger:		log.New(os.Stderr, "[server] ", log.LstdFlags),
 		store:		store.New(conf.RaftDir, conf.RaftBind, conf.InMem),
 		address: 	conf.Listen,
-		locks:		make(map[FilePath]*Lock),
-		sessions:	make(map[ClientID]*Session),
+		locks:		make(map[api.FilePath]*Lock),
+		sessions:	make(map[api.ClientID]*Session),
 	}
 
 	// Open the store.

@@ -3,6 +3,7 @@
 package main
 
 import (
+	"cos518project/chubby/api"
 	"cos518project/chubby/client"
 	"flag"
 	"log"
@@ -31,7 +32,7 @@ func main() {
 	signal.Notify(quitCh, os.Kill, os.Interrupt, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	_, err := client.InitSession(
-		client.ClientID(clientID),
+		api.ClientID(clientID),
 		DefaultServerAddr)
 
 	if err != nil {

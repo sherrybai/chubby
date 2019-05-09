@@ -5,11 +5,11 @@ package server
 import (
 	"errors"
 	"fmt"
-	"time"
+	"cos518project/chubby/api"
 )
 
 /*
- * RPC interfaces.
+ * Additional RPC interfaces available only to servers.
  */
 
 type JoinRequest struct {
@@ -19,61 +19,6 @@ type JoinRequest struct {
 
 type JoinResponse struct {
 	Error error
-}
-
-type InitSessionRequest struct {
-	ClientID ClientID
-}
-
-type InitSessionResponse struct {
-	LeaderAddress string
-}
-
-type KeepAliveRequest struct {
-	ClientID ClientID
-}
-
-type KeepAliveResponse struct {
-	LeaseLength time.Duration
-}
-
-// TODO: make all fields exported
-
-type OpenLockRequest struct {
-	clientID ClientID
-	filepath FilePath
-}
-
-type OpenLockResponse struct {
-
-}
-
-type DeleteLockRequest struct {
-	clientID ClientID
-	filepath FilePath
-}
-
-type DeleteLockResponse struct {
-
-}
-
-type TryAcquireLockRequest struct {
-	clientID ClientID
-	filepath FilePath
-	mode LockMode
-}
-
-type TryAcquireLockResponse struct {
-	isSuccessful bool
-}
-
-type ReleaseLockRequest struct {
-	clientID ClientID
-	filepath FilePath
-}
-
-type ReleaseLockResponse struct {
-
 }
 
 // RPC handler type
@@ -95,12 +40,12 @@ func (h *Handler) Join(req JoinRequest, res *JoinResponse) error {
  */
 
 // Initialize a client-server session.
-func (h *Handler) InitSession(req InitSessionRequest, res *InitSessionResponse) error {
+func (h *Handler) InitSession(req api.InitSessionRequest, res *api.InitSessionResponse) error {
 	//if app.address != string(app.store.Raft.Leader()) {
 	//	res.LeaderAddress = string(app.store.Raft.Leader())
 	//	return nil
 	//}
-	_, err := CreateSession(ClientID(req.ClientID))
+	_, err := CreateSession(api.ClientID(req.ClientID))
 	if err != nil {
 		return err
 	}
@@ -109,7 +54,7 @@ func (h *Handler) InitSession(req InitSessionRequest, res *InitSessionResponse) 
 }
 
 // KeepAlive calls allow the client to extend the Chubby session.
-func (h *Handler) KeepAlive(req KeepAliveRequest, res *KeepAliveResponse) error {
+func (h *Handler) KeepAlive(req api.KeepAliveRequest, res *api.KeepAliveResponse) error {
 	//// If a non-leader node receives a KeepAlive, return error
 	//if app.address != string(app.store.Raft.Leader()) {
 	//	return errors.New(fmt.Sprintf("Node %s is not the leader", app.address))
@@ -132,12 +77,12 @@ func (h *Handler) KeepAlive(req KeepAliveRequest, res *KeepAliveResponse) error 
 // Chubby API methods for handling locks.
 // Each method corresponds to a method in session.go.
 // Open a lock.
-func (h *Handler) OpenLock(req OpenLockRequest, res *OpenLockResponse) error {
-	sess, ok := app.sessions[req.clientID]
+func (h *Handler) OpenLock(req api.OpenLockRequest, res *api.OpenLockResponse) error {
+	sess, ok := app.sessions[req.ClientID]
 	if !ok {
-		return errors.New(fmt.Sprintf("No session exists for %s", req.clientID))
+		return errors.New(fmt.Sprintf("No session exists for %s", req.ClientID))
 	}
-	err := sess.OpenLock(req.filepath)
+	err := sess.OpenLock(req.Filepath)
 	if err != nil {
 		return err
 	}
@@ -145,12 +90,12 @@ func (h *Handler) OpenLock(req OpenLockRequest, res *OpenLockResponse) error {
 }
 
 // Delete a lock.
-func (h *Handler) DeleteLock(req DeleteLockRequest, res *DeleteLockResponse) error {
-	sess, ok := app.sessions[req.clientID]
+func (h *Handler) DeleteLock(req api.DeleteLockRequest, res *api.DeleteLockResponse) error {
+	sess, ok := app.sessions[req.ClientID]
 	if !ok {
-		return errors.New(fmt.Sprintf("No session exists for %s", req.clientID))
+		return errors.New(fmt.Sprintf("No session exists for %s", req.ClientID))
 	}
-	err := sess.DeleteLock(req.filepath)
+	err := sess.DeleteLock(req.Filepath)
 	if err != nil {
 		return err
 	}
@@ -158,26 +103,26 @@ func (h *Handler) DeleteLock(req DeleteLockRequest, res *DeleteLockResponse) err
 }
 
 // Try to acquire a lock.
-func (h *Handler) TryAcquireLock(req TryAcquireLockRequest, res *TryAcquireLockResponse) error {
-	sess, ok := app.sessions[req.clientID]
+func (h *Handler) TryAcquireLock(req api.TryAcquireLockRequest, res *api.TryAcquireLockResponse) error {
+	sess, ok := app.sessions[req.ClientID]
 	if !ok {
-		return errors.New(fmt.Sprintf("No session exists for %s", req.clientID))
+		return errors.New(fmt.Sprintf("No session exists for %s", req.ClientID))
 	}
-	isSuccessful, err := sess.TryAcquireLock(req.filepath, req.mode)
+	isSuccessful, err := sess.TryAcquireLock(req.Filepath, req.Mode)
 	if err != nil {
 		return err
 	}
-	res.isSuccessful = isSuccessful
+	res.IsSuccessful = isSuccessful
 	return nil
 }
 
 // Release lock.
-func (h *Handler) ReleaseLock(req ReleaseLockRequest, res *ReleaseLockResponse) error {
-	sess, ok := app.sessions[req.clientID]
+func (h *Handler) ReleaseLock(req api.ReleaseLockRequest, res *api.ReleaseLockResponse) error {
+	sess, ok := app.sessions[req.ClientID]
 	if !ok {
-		return errors.New(fmt.Sprintf("No session exists for %s", req.clientID))
+		return errors.New(fmt.Sprintf("No session exists for %s", req.ClientID))
 	}
-	err := sess.ReleaseLock(req.filepath)
+	err := sess.ReleaseLock(req.Filepath)
 	if err != nil {
 		return err
 	}
