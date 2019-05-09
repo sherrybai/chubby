@@ -102,9 +102,6 @@ func (sess *Session) DestroySession() {
 
 // Extend Lease after receiving keepalive messages
 func (sess *Session) KeepAlive(clientID ClientID) (time.Duration, error) {
-	if _, ok := app.sessions[sess.clientID]; !ok {
-		return 0, errors.New(fmt.Sprintf("The current session is closed"))
-	}
 	// Block until shortly before lease expires
 	<- sess.ttlChannel
 	// Extend lease by 12 seconds
@@ -118,9 +115,6 @@ func (sess *Session) KeepAlive(clientID ClientID) (time.Duration, error) {
 
 // Create the lock if it does not exist.
 func (sess *Session) OpenLock(path FilePath) error {
-	if _, ok := app.sessions[sess.clientID]; !ok {
-		return errors.New(fmt.Sprintf("The current session is closed"))
-	}
 	// Check if lock exists in persistent store
 	_, err := app.store.Get(string(path))
 	if err != nil {
@@ -143,9 +137,6 @@ func (sess *Session) OpenLock(path FilePath) error {
 
 // Delete the lock. Lock must be held in exclusive mode before calling DeleteLock.
 func (sess *Session) DeleteLock(path FilePath) error {
-	if _, ok := app.sessions[sess.clientID]; !ok {
-		return errors.New(fmt.Sprintf("The current session is closed"))
-	}
 	// If we are not holding the lock, we cannot delete it.
 	lock, exists := sess.locks[path]
 	if !exists {
@@ -177,9 +168,6 @@ func (sess *Session) DeleteLock(path FilePath) error {
 
 // Try to acquire the lock, returning either success (true) or failure (false).
 func (sess *Session) TryAcquireLock (path FilePath, mode LockMode) (bool, error) {
-	if _, ok := app.sessions[sess.clientID]; !ok {
-		return false, errors.New(fmt.Sprintf("The current session is closed"))
-	}
 	// Validate mode of the lock.
 	if mode != EXCLUSIVE && mode != SHARED {
 		return false, errors.New(fmt.Sprintf("Invalid mode."))
@@ -265,9 +253,6 @@ func (sess *Session) TryAcquireLock (path FilePath, mode LockMode) (bool, error)
 
 // Release the lock.
 func (sess *Session) ReleaseLock (path FilePath) (error) {
-	if _, ok := app.sessions[sess.clientID]; !ok {
-		return errors.New(fmt.Sprintf("The current session is closed"))
-	}
 	// Check if lock exists in persistent store
 	_, err := app.store.Get(string(path))
 

@@ -85,8 +85,8 @@ func InitSession(clientID ClientID, serverAddr string) (*ClientSession, error) {
 
 	// Make RPC call.
 	req := InitSessionRequest{clientID: clientID}
-	resp := InitSessionResponse{}
-	err = rpcClient.Call("Handler.InitSession", req, &resp)
+	resp := &InitSessionResponse{}
+	err = rpcClient.Call("Handler.InitSession", req, resp)
 	if err != nil {
 		return nil, err
 	}
@@ -110,15 +110,15 @@ func (sess *ClientSession) MonitorSession() {
 	for {
 		// Make new keepAlive channel.
 		// This should be ok because this loop only occurs every 12 seconds to 57 seconds.
-		keepAliveChan := make(chan KeepAliveResponse, 1)
+		keepAliveChan := make(chan *KeepAliveResponse, 1)
 
 		// Send a KeepAlive, waiting for a response from the master.
 		go func() {
 			// TODO: fill out req/resp
-			req := KeepAliveRequest{}
-			resp := KeepAliveResponse{}
+			req := KeepAliveRequest{clientID: sess.clientID}
+			resp := &KeepAliveResponse{}
 			err = sess.rpcClient.Call("Handler.KeepAlive", req, resp)
-			
+
 			keepAliveChan <- resp
 		}()
 
@@ -134,7 +134,7 @@ func (sess *ClientSession) MonitorSession() {
 
 			// Adjust new lease length.
 			if (sess.leaseLength >= resp.leaseLength) {
-
+				// TODO: error here!
 			}
 			sess.leaseLength = resp.leaseLength
 
@@ -154,7 +154,11 @@ func (sess *ClientSession) MonitorSession() {
 				sess.logger.Printf("session with %s safe", sess.serverAddr)
 
 				// Process master's response
-
+				// Adjust new lease length.
+				if (sess.leaseLength >= resp.leaseLength) {
+					// TODO: error here!
+				}
+				sess.leaseLength = resp.leaseLength
 
 			case <- time.After(durationJeopardyOver):
 				// Jeopardy period ends -- tear down the session
