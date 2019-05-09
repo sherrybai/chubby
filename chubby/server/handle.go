@@ -26,31 +26,58 @@ type JoinResponse struct {
 }
 
 
-type initSessionRequest struct {
+type InitSessionRequest struct {
 	clientID ClientID
 }
 
-type initSessionResponse struct {
+type InitSessionResponse struct {
 	leaderAddress string
-	leaseLength time.Duration
+	isLeader bool
 }
 
-type keepAliveRequest struct {
+type KeepAliveRequest struct {
 	clientID ClientID
 }
 
-type keepAliveResponse struct {
+type KeepAliveResponse struct {
 	leaseLength time.Duration
 }
 
-type Response struct {
-	leaderAddress string
-	leaseLength time.Duration
+type OpenLockRequest struct {
+	clientID ClientID
+	filepath FilePath
 }
 
-type Request struct {
+type OpenLockResponse struct {
+
+}
+
+type DeleteLockRequest struct {
+	clientID ClientID
+	filepath FilePath
+}
+
+type DeleteLockResponse struct {
+
+}
+
+type TryAcquireLockRequest struct {
+	clientID ClientID
+	filepath FilePath
 	mode LockMode
-	path FilePath
+}
+
+type TryAcquireLockResponse struct {
+	isSuccessful bool
+}
+
+type ReleaseLockRequest struct {
+	clientID ClientID
+	filepath FilePath
+}
+
+type ReleaseLockResponse struct {
+
 }
 
 // RPC handler type
@@ -72,36 +99,30 @@ func (h *Handler) Join(req JoinRequest, res *JoinResponse) error {
  */
 
 // Initialize a client-server session.
-func (h *Handler) InitSession(req initSessionRequest, res *initSessionResponse) error {
+func (h *Handler) InitSession(req InitSessionRequest, res *InitSessionResponse) error {
 	if app.address != string(app.store.Raft.Leader()) {
-		res.leaseLength = 0*time.Second
+		res.isLeader = false
 		res.leaderAddress = string(app.store.Raft.Leader())
+		return nil
+
 	}
-	sess, err := CreateSession(ClientID(req.clientID))
+	_, err := CreateSession(ClientID(req.clientID))
 	if err != nil {
 		return err
 	}
-	response := &Response{leaderAddress: string(app.store.Raft.Leader()), leaseLength: sess.leaseLength}
-	b, err := json.Marshal(response)
-	if err != nil {
-		res.response = b
-	} else {
-		return err
-	}
+	res.isLeader = true
+	res.leaderAddress = string(app.store.Raft.Leader())
 	return nil
 }
 
 // KeepAlive calls allow the client to extend the Chubby session.
-func (h *Handler) HandleKeepAlive(req ClientRequest, res *ClientResponse) error {
+func (h *Handler) HandleKeepAlive(req KeepAliveRequest, res *KeepAliveResponse) error {
 	session := app.sessions[ClientID(req.clientID)]
-	duration, _ := session.KeepAlive(ClientID(req.clientID))
-	response := &Response{leaderAddress: string(app.store.Raft.Leader()), leaseLength: duration}
-	b, err := json.Marshal(response)
+	duration, err := session.KeepAlive(ClientID(req.clientID))
 	if err != nil {
-		res.response = b
-	} else {
 		return err
 	}
+	res.leaseLength = duration
 	return nil
 }
 
@@ -109,21 +130,42 @@ func (h *Handler) HandleKeepAlive(req ClientRequest, res *ClientResponse) error 
 // Each method corresponds to a method in session.go.
 
 // Open a lock.
-func (h *Handler) OpenLock(req ClientRequest, res *ClientResponse) error {
-
+func (h *Handler) OpenLock(req OpenLockRequest, res *OpenLockResponse) error {
+	session := app.sessions[ClientID(req.clientID)]
+	err := session.OpenLock(req.filepath)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Delete a lock.
-func (h *Handler) DeleteLock(req ClientRequest, res *ClientResponse) error {
-
+func (h *Handler) DeleteLock(req DeleteLockRequest, res *DeleteLockResponse) error {
+	session := app.sessions[ClientID(req.clientID)]
+	err := session.DeleteLock(req.filepath)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Try to acquire a lock.
-func (h *Handler) TryAcquireLock(req ClientRequest, res *ClientResponse) error {
-
+func (h *Handler) TryAcquireLock(req TryAcquireLockRequest, res *TryAcquireLockResponse) error {
+	session := app.sessions[ClientID(req.clientID)]
+	isSuccessful, err := session.TryAcquireLock(req.filepath, req.mode)
+	if err != nil {
+		return err
+	}
+	res.isSuccessful = isSuccessful
+	return nil
 }
 
 // Release lock.
-func (h *Handler) ReleaseLock(req ClientRequest, res *ClientResponse) error {
-
+func (h *Handler) ReleaseLock(req ReleaseLockRequest, res *ReleaseLockResponse) error {
+	session := app.sessions[ClientID(req.clientID)]
+	err := session.ReleaseLock(req.filepath)
+	if err != nil {
+		return err
+	}
+	return nil
 }
