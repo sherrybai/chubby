@@ -42,6 +42,9 @@ type Session struct {
     // A data structure describing which locks the client holds.
     // Maps lock filepath -> Lock struct.
     locks           map[FilePath]*Lock
+
+	// Did we terminate this session?
+	terminated		bool
 }
 
 // Lock describes information about a particular Chubby lock.
@@ -64,6 +67,7 @@ func CreateSession(clientID ClientID) (*Session, error) {
         leaseLength: DefaultLeaseExt,
         ttlChannel:  make(chan string,1),
         locks:       make(map[FilePath]*Lock),
+        terminated:	 false,
     }
 
 	// Add the session to the sessions map.
@@ -86,18 +90,23 @@ func (sess *Session) MonitorSession() {
 			sess.ttlChannel <- "Ready"
 		}
 		if durationLeaseOver <= 0 {
-			// Lease expired: destroy the session
-			sess.DestroySession()
+			// Lease expired: terminate the session
+			sess.TerminateSession()
 			return
 		}
 	}
 }
 
-// Destroy the session.
-func (sess *Session) DestroySession() {
-	delete(app.sessions, sess.clientID)
+// Terminate the session.
+func (sess *Session) TerminateSession() {
+	// We cannot delete the session from the app session map because
+	// Chubby could have experienced a failover event.
+	sess.terminated = true
 
-	app.logger.Printf("destroyed session with client %s", sess.clientID)
+	// Release all the locks in the session.
+	
+
+	app.logger.Printf("terminated session with client %s", sess.clientID)
 }
 
 // Extend Lease after receiving keepalive messages

@@ -100,7 +100,6 @@ func (h *Handler) InitSession(req InitSessionRequest, res *InitSessionResponse) 
 		res.isLeader = false
 		res.leaderAddress = string(app.store.Raft.Leader())
 		return nil
-
 	}
 	_, err := CreateSession(ClientID(req.clientID))
 	if err != nil {
@@ -113,9 +112,15 @@ func (h *Handler) InitSession(req InitSessionRequest, res *InitSessionResponse) 
 
 // KeepAlive calls allow the client to extend the Chubby session.
 func (h *Handler) KeepAlive(req KeepAliveRequest, res *KeepAliveResponse) error {
+	// If a non-leader node receives a KeepAlive, return error
+	if app.address != string(app.store.Raft.Leader()) {
+		return errors.New(fmt.Sprintf("Node %s is not the leader", app.address))
+	}
+
+	// TODO: change this to handle failovers
 	sess, ok := app.sessions[req.clientID]
 	if !ok {
-		return errors.New(fmt.Sprintf("The current session is closed"))
+		return errors.New(fmt.Sprintf("No session exists for %s", req.clientID))
 	}
 
 	duration, err := sess.KeepAlive(req.clientID)
@@ -132,7 +137,7 @@ func (h *Handler) KeepAlive(req KeepAliveRequest, res *KeepAliveResponse) error 
 func (h *Handler) OpenLock(req OpenLockRequest, res *OpenLockResponse) error {
 	sess, ok := app.sessions[req.clientID]
 	if !ok {
-		return errors.New(fmt.Sprintf("The current session is closed"))
+		return errors.New(fmt.Sprintf("No session exists for %s", req.clientID))
 	}
 	err := sess.OpenLock(req.filepath)
 	if err != nil {
@@ -145,7 +150,7 @@ func (h *Handler) OpenLock(req OpenLockRequest, res *OpenLockResponse) error {
 func (h *Handler) DeleteLock(req DeleteLockRequest, res *DeleteLockResponse) error {
 	sess, ok := app.sessions[req.clientID]
 	if !ok {
-		return errors.New(fmt.Sprintf("The current session is closed"))
+		return errors.New(fmt.Sprintf("No session exists for %s", req.clientID))
 	}
 	err := sess.DeleteLock(req.filepath)
 	if err != nil {
@@ -158,7 +163,7 @@ func (h *Handler) DeleteLock(req DeleteLockRequest, res *DeleteLockResponse) err
 func (h *Handler) TryAcquireLock(req TryAcquireLockRequest, res *TryAcquireLockResponse) error {
 	sess, ok := app.sessions[req.clientID]
 	if !ok {
-		return errors.New(fmt.Sprintf("The current session is closed"))
+		return errors.New(fmt.Sprintf("No session exists for %s", req.clientID))
 	}
 	isSuccessful, err := sess.TryAcquireLock(req.filepath, req.mode)
 	if err != nil {
@@ -172,7 +177,7 @@ func (h *Handler) TryAcquireLock(req TryAcquireLockRequest, res *TryAcquireLockR
 func (h *Handler) ReleaseLock(req ReleaseLockRequest, res *ReleaseLockResponse) error {
 	sess, ok := app.sessions[req.clientID]
 	if !ok {
-		return errors.New(fmt.Sprintf("The current session is closed"))
+		return errors.New(fmt.Sprintf("No session exists for %s", req.clientID))
 	}
 	err := sess.ReleaseLock(req.filepath)
 	if err != nil {
