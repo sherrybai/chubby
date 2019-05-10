@@ -29,8 +29,8 @@ type Session struct {
 	//TTL Lock
 	ttlLock 		sync.Mutex
 
-	// Channel used to block Keepalive 
-	ttlChannel  	chan string
+	// Channel used to block KeepAlive
+	ttlChannel  	chan struct{}
 
     // A data structure describing which locks the client holds.
     // Maps lock filepath -> Lock struct.
@@ -38,6 +38,9 @@ type Session struct {
 
 	// Did we terminate this session?
 	terminated		bool
+
+	// Terminated channel
+	terminatedChan	chan struct{}
 }
 
 // Lock describes information about a particular Chubby lock.
@@ -58,12 +61,13 @@ func CreateSession(clientID api.ClientID) (*Session, error) {
 
 	// Create new session struct.
 	sess = &Session{
-        clientID:    clientID,
-        startTime:   time.Now(),
-        leaseLength: DefaultLeaseExt,
-        ttlChannel:  make(chan string,2),
-        locks:       make(map[api.FilePath]*Lock),
-        terminated:	 false,
+        clientID:    	clientID,
+        startTime:   	time.Now(),
+        leaseLength: 	DefaultLeaseExt,
+        ttlChannel:  	make(chan struct{}, 2),
+        locks:       	make(map[api.FilePath]*Lock),
+        terminated:	 	false,
+        terminatedChan: make(chan struct{}, 2),
     }
 
 	// Add the session to the sessions map.
@@ -88,23 +92,26 @@ func (sess *Session) MonitorSession() {
 			durationLeaseOver = time.Until(timeLeaseOver)
 		}
 
-		if durationLeaseOver <= (1 * time.Second) {
-			// Trigger KeepAlive response 1 second before timeout
-			sess.ttlChannel <- "Ready"
-		}
 		if durationLeaseOver == 0 {
 			// Lease expired: terminate the session
+			app.logger.Printf("Lease with client %s expired: terminating session", sess.clientID)
 			sess.TerminateSession()
 			return
+		}
+
+		if durationLeaseOver <= (1 * time.Second) {
+			// Trigger KeepAlive response 1 second before timeout
+			sess.ttlChannel <- struct{}{}
 		}
 	}
 }
 
 // Terminate the session.
 func (sess *Session) TerminateSession() {
-	// We cannot delete the session from the app session map because
+	// We cannot delete the session from Failedthe app session map because
 	// Chubby could have experienced a failover event.
 	sess.terminated = true
+	close(sess.terminatedChan)
 
 	// Release all the locks in the session.
 	
@@ -115,17 +122,23 @@ func (sess *Session) TerminateSession() {
 // Extend Lease after receiving keepalive messages
 func (sess *Session) KeepAlive(clientID api.ClientID) (time.Duration, error) {
 	// Block until shortly before lease expires
-	<- sess.ttlChannel
-	// Extend lease by 12 seconds
-	sess.leaseLength = sess.leaseLength + DefaultLeaseExt
+	select {
+	case <- sess.terminatedChan:
+		// Return early response saying that session should end.
+		return sess.leaseLength, nil
 
-	app.logger.Printf(
-		"session with client %s extended: lease length %s",
-		sess.clientID,
-		sess.leaseLength.String())
+	case <- sess.ttlChannel:
+		// Extend lease by 12 seconds
+		sess.leaseLength = sess.leaseLength + DefaultLeaseExt
 
-	// Return new lease length.
-	return sess.leaseLength, nil
+		app.logger.Printf(
+			"session with client %s extended: lease length %s",
+			sess.clientID,
+			sess.leaseLength.String())
+
+		// Return new lease length.
+		return sess.leaseLength, nil
+	}
 }
 
 // Create the lock if it does not exist.

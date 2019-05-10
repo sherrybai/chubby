@@ -3,9 +3,9 @@
 package server
 
 import (
+	"cos518project/chubby/api"
 	"errors"
 	"fmt"
-	"cos518project/chubby/api"
 )
 
 /*
@@ -60,10 +60,40 @@ func (h *Handler) KeepAlive(req api.KeepAliveRequest, res *api.KeepAliveResponse
 		return errors.New(fmt.Sprintf("Node %s is not the leader", app.address))
 	}
 
+	var err error
 	sess, ok := app.sessions[req.ClientID]
 	if !ok {
-		// Probably a jeopardy KeepAlive: grab new session info from client
+		// Probably a jeopardy KeepAlive: create a new session for the client
+		app.logger.Printf("Client %s sent jeopardy KeepAlive: creating new session", req.ClientID)
 
+		// Note: this starts the local lease countdown
+		// Should be ok to not call KeepAlive until later because lease TTL is pretty long (12s)
+		sess, err = CreateSession(req.ClientID)
+		if err != nil {
+			// This shouldn't happen because session shouldn't be in app.sessions struct yet
+			return err
+		}
+
+		app.logger.Printf("New session for client %s created", req.ClientID)
+
+		// For each lock in the KeepAlive, try to acquire the lock
+		// If any of the acquires fail, terminate the session and return error
+		for filePath, lockMode := range(req.Locks) {
+			ok, err := sess.TryAcquireLock(filePath, lockMode)
+			if !ok {
+				app.logger.Printf("Jeopardy client %s failed to acquire lock at %s", req.ClientID, filePath)
+
+				// This should cause the KeepAlive response to return that session should end.
+				sess.TerminateSession()
+				if err != nil {
+					return errors.New(fmt.Sprintf("Failed to acquire lock at %s with error: %s", err.Error()))
+				} else {
+					return errors.New(fmt.Sprintf("Failed to acquire lock at %s", filePath))
+				}
+			}
+		}
+
+		app.logger.Printf("Finished jeopardy KeepAlive process for client %s", req.ClientID)
 	}
 
 	duration, err := sess.KeepAlive(req.ClientID)
@@ -74,8 +104,6 @@ func (h *Handler) KeepAlive(req api.KeepAliveRequest, res *api.KeepAliveResponse
 	return nil
 }
 
-// Chubby API methods for handling locks.
-// Each method corresponds to a method in session.go.
 // Open a lock.
 func (h *Handler) OpenLock(req api.OpenLockRequest, res *api.OpenLockResponse) error {
 	sess, ok := app.sessions[req.ClientID]
