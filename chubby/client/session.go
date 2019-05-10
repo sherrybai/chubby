@@ -2,6 +2,7 @@ package client
 
 import (
 	"cos518project/chubby/api"
+	"errors"
 	"log"
 	"net/rpc"
 	"os"
@@ -64,6 +65,7 @@ func InitSession(clientID api.ClientID) (*ClientSession, error) {
 		// Try to set up TCP connection to server.
 		rpcClient, err := rpc.Dial("tcp", serverAddr)
 		if err != nil {
+			sess.logger.Printf("RPC Dial error: %s", err.Error())
 			continue
 		}
 
@@ -82,6 +84,10 @@ func InitSession(clientID api.ClientID) (*ClientSession, error) {
 			sess.rpcClient = rpcClient
 			break
 		}
+	}
+
+	if sess.serverAddr == "" {
+		return nil, errors.New("Could not connect to any server.")
 	}
 
 	// Call MonitorSession.
@@ -103,7 +109,7 @@ func (sess *ClientSession) MonitorSession() {
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					sess.logger.Printf("KeepAlive waiter encounted panic: recovering")
+					sess.logger.Printf("KeepAlive waiter encounted panic: %s; recovering", r)
 				}
 			}()
 
