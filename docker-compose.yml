@@ -10,6 +10,7 @@ services:
             context: .
             dockerfile: Dockerfile.node2
         network_mode: host
+        restart: on-failure
         depends_on:
             - "node1"
     node3:
@@ -17,6 +18,7 @@ services:
             context: .
             dockerfile: Dockerfile.node3
         network_mode: host
+        restart: on-failure
         depends_on:
             - "node1"
     node4:
@@ -24,6 +26,7 @@ services:
             context: .
             dockerfile: Dockerfile.node4
         network_mode: host
+        restart: on-failure
         depends_on:
             - "node1"
     node5:
@@ -31,5 +34,6 @@ services:
             context: .
             dockerfile: Dockerfile.node5
         network_mode: host
+        restart: on-failure
         depends_on:
             - "node1"
