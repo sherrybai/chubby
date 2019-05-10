@@ -108,13 +108,22 @@ func (sess *Session) MonitorSession() {
 
 // Terminate the session.
 func (sess *Session) TerminateSession() {
-	// We cannot delete the session from Failedthe app session map because
+	// We can't justs delete the session from the app session map because
 	// Chubby could have experienced a failover event.
 	sess.terminated = true
 	close(sess.terminatedChan)
 
 	// Release all the locks in the session.
-	
+	for filePath := range sess.locks {
+		err := sess.ReleaseLock(filePath)
+		if err != nil {
+			app.logger.Printf(
+				"error when client %s releasing lock at %s: %s",
+				sess.clientID,
+				filePath,
+				err.Error())
+		}
+	}
 
 	app.logger.Printf("terminated session with client %s", sess.clientID)
 }
