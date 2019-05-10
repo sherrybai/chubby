@@ -10,4 +10,4 @@ RUN go get -d -v ./...
 RUN go build -o bin/chubby chubby/cmd/main.go
 
 # Run chubby exec
-CMD ["bin/chubby", "-id", "node5", "-listen", ":9379", "-raftbind", ":19379", "-join", "localhost:5379"]
+CMD ["bin/chubby", "-id", "node5", "-listen", "172.20.128.5:5379", "-raftbind", "172.20.128.5:15379", "-join", "172.20.128.1:5379"]

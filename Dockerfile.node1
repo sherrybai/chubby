@@ -10,5 +10,4 @@ RUN go get -d -v ./...
 RUN go build -o bin/chubby chubby/cmd/main.go
 
 # Run chubby exec
-# Default ports: listen on :5379, raftbind :15379
-CMD ["bin/chubby", "-id", "node1"]
+CMD ["bin/chubby", "-id", "node1", "-listen", "172.20.128.1:5379", "-raftbind", "172.20.128.1:15379"]

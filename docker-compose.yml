@@ -4,36 +4,51 @@ services:
         build:
             context: .
             dockerfile: Dockerfile.node1
-        network_mode: host
+        networks:
+            static-network:
+                ipv4_address: 172.20.128.1
     node2:
         build:
             context: .
             dockerfile: Dockerfile.node2
-        network_mode: host
         restart: on-failure
         depends_on:
             - "node1"
+        networks:
+            static-network:
+                ipv4_address: 172.20.128.2
     node3:
         build:
             context: .
             dockerfile: Dockerfile.node3
-        network_mode: host
         restart: on-failure
         depends_on:
             - "node1"
+        networks:
+            static-network:
+                ipv4_address: 172.20.128.3
     node4:
         build:
             context: .
             dockerfile: Dockerfile.node4
-        network_mode: host
         restart: on-failure
         depends_on:
             - "node1"
+        networks:
+            static-network:
+                ipv4_address: 172.20.128.4
     node5:
         build:
             context: .
             dockerfile: Dockerfile.node5
-        network_mode: host
         restart: on-failure
         depends_on:
             - "node1"
+        networks:
+            static-network:
+                ipv4_address: 172.20.128.5
+networks:
+    static-network:
+        ipam:
+            config:
+                - subnet: 172.20.0.0/16
