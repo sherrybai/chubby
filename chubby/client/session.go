@@ -2,6 +2,8 @@ package client
 
 import (
 	"cos518project/chubby/api"
+	"errors"
+	"fmt"
 	"log"
 	"net/rpc"
 	"os"
@@ -259,3 +261,91 @@ func (sess *ClientSession) MonitorSession() {
 
 // Current plan is to implement a function for each Chubby library call.
 // Each function should check jeopardyFlag to see if call should be blocked.
+func (sess *ClientSession) OpenLock(filePath api.FilePath) error {
+	if sess.jeopardyFlag {
+		durationJeopardyOver := time.Until(sess.startTime.Add(sess.leaseLength + JeopardyDuration))
+		select {
+		case <-sess.jeopardyChan:
+			sess.logger.Printf("session with %s reestablished", sess.serverAddr)
+		case <-time.After(durationJeopardyOver):
+			return errors.New(fmt.Sprintf("session with %s expired", sess.serverAddr))
+		}
+	}
+	sess.logger.Printf("Sending OpenLock request to server %s", sess.serverAddr)
+	req := api.OpenLockRequest{ClientID: sess.clientID, Filepath: filePath}
+	resp := &api.OpenLockResponse{}
+	err := sess.rpcClient.Call("Handler.OpenLock", req, resp)
+	if err != nil {
+		sess.logger.Printf("OpenLock with server %s failed with error %s", sess.serverAddr, err.Error())
+	} else {
+		sess.logger.Printf("Open Lock successfully at filepath %s in session with %s", filePath, sess.serverAddr)
+	}
+	return err
+}
+
+func (sess *ClientSession) DeleteLock(filePath api.FilePath) error {
+	if sess.jeopardyFlag {
+		durationJeopardyOver := time.Until(sess.startTime.Add(sess.leaseLength + JeopardyDuration))
+		select {
+		case <-sess.jeopardyChan:
+			sess.logger.Printf("session with %s reestablished", sess.serverAddr)
+		case <-time.After(durationJeopardyOver):
+			return errors.New(fmt.Sprintf("session with %s expired", sess.serverAddr))
+		}
+	}
+	sess.logger.Printf("Sending DeleteLock request to server %s", sess.serverAddr)
+	req := api.DeleteLockRequest{ClientID: sess.clientID, Filepath: filePath}
+	resp := &api.DeleteLockResponse{}
+	err := sess.rpcClient.Call("Handler.DeleteLock", req, resp)
+	if err != nil {
+		sess.logger.Printf("DeleteLock with server %s failed with error %s", sess.serverAddr, err.Error())
+	} else {
+		sess.logger.Printf("Delete Lock successfully at filepath %s in session with %s", filePath, sess.serverAddr)
+	}
+	return err
+}
+
+func (sess *ClientSession) TryAcquireLock(filePath api.FilePath, mode api.LockMode) (bool,error) {
+	if sess.jeopardyFlag {
+		durationJeopardyOver := time.Until(sess.startTime.Add(sess.leaseLength + JeopardyDuration))
+		select {
+		case <-sess.jeopardyChan:
+			sess.logger.Printf("session with %s reestablished", sess.serverAddr)
+		case <-time.After(durationJeopardyOver):
+			return false, errors.New(fmt.Sprintf("session with %s expired", sess.serverAddr))
+		}
+	}
+	sess.logger.Printf("Sending TryAcquireLock request to server %s", sess.serverAddr)
+	req := api.TryAcquireLockRequest{ClientID: sess.clientID, Filepath: filePath, Mode: mode}
+	resp := &api.TryAcquireLockResponse{}
+	err := sess.rpcClient.Call("Handler.TryAcquireLock", req, resp)
+	if err != nil {
+		sess.logger.Printf("TryAcquireLock with server %s failed with error %s", sess.serverAddr, err.Error())
+	} else {
+		sess.logger.Printf("TryAcquireLock successful at filepath %s in session with %s with mode %s", filePath, sess.serverAddr, string(mode))
+	}
+	return resp.IsSuccessful, err
+}
+
+func (sess *ClientSession) ReleaseLock(filePath api.FilePath) error {
+	if sess.jeopardyFlag {
+		durationJeopardyOver := time.Until(sess.startTime.Add(sess.leaseLength + JeopardyDuration))
+		select {
+		case <-sess.jeopardyChan:
+			sess.logger.Printf("session with %s reestablished", sess.serverAddr)
+		case <-time.After(durationJeopardyOver):
+			return errors.New(fmt.Sprintf("session with %s expired", sess.serverAddr))
+		}
+	}
+	sess.logger.Printf("Sending ReleaseLock request to server %s", sess.serverAddr)
+	req := api.ReleaseLockRequest{ClientID: sess.clientID, Filepath: filePath}
+	resp := &api.ReleaseLockResponse{}
+	err := sess.rpcClient.Call("Handler.ReleaseLock", req, resp)
+	if err != nil {
+		sess.logger.Printf("ReleaseLock with server %s failed with error %s", sess.serverAddr, err.Error())
+	} else {
+		sess.logger.Printf("Release Lock successfully at filepath %s in session with %s", filePath, sess.serverAddr)
+	}
+	return err
+}
+
