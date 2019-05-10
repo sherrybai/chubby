@@ -57,7 +57,6 @@ func main() {
 
 	// Run the server.
 	go server.Run(c)
-
 	// Exit on signal.
 	<-quitCh
 }

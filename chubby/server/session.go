@@ -109,6 +109,7 @@ func (sess *Session) MonitorSession() {
 // Terminate the session.
 func (sess *Session) TerminateSession() {
 	// We can't justs delete the session from the app session map because
+	// We cannot delete the session from the app session map because
 	// Chubby could have experienced a failover event.
 	sess.terminated = true
 	close(sess.terminatedChan)
