@@ -120,12 +120,12 @@ func (sess *Session) TerminateSession() {
 }
 
 // Extend Lease after receiving keepalive messages
-func (sess *Session) KeepAlive(clientID api.ClientID) (time.Duration, error) {
+func (sess *Session) KeepAlive(clientID api.ClientID) (time.Duration) {
 	// Block until shortly before lease expires
 	select {
 	case <- sess.terminatedChan:
 		// Return early response saying that session should end.
-		return sess.leaseLength, nil
+		return sess.leaseLength
 
 	case <- sess.ttlChannel:
 		// Extend lease by 12 seconds
@@ -137,7 +137,7 @@ func (sess *Session) KeepAlive(clientID api.ClientID) (time.Duration, error) {
 			sess.leaseLength.String())
 
 		// Return new lease length.
-		return sess.leaseLength, nil
+		return sess.leaseLength
 	}
 }
 
@@ -235,9 +235,9 @@ func (sess *Session) TryAcquireLock (path api.FilePath, mode api.LockMode) (bool
 		if len(lock.owners) == 0 {
 			// Throw an error if there are no owners but lock.mode is api.EXCLUSIVE:
 			// this means ReleaseLock was not implemented correctly
-			return false, errors.New("Lock has api.EXCLUSIVE mode despite having no owners")
+			return false, errors.New("Lock has EXCLUSIVE mode despite having no owners")
 		} else if len(lock.owners) > 1 {
-			return false, errors.New("Lock has api.EXCLUSIVE mode but has multiple owners")
+			return false, errors.New("Lock has EXCLUSIVE mode but has multiple owners")
 		} else {
 			// Fail with no error
 			return false, nil

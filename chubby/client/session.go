@@ -45,11 +45,10 @@ const JeopardyDuration time.Duration = 45 * time.Second
 
 // Set up a Chubby session and periodically send KeepAlives to the server.
 // This method should be run as a new goroutine by the client.
-func InitSession(clientID api.ClientID, serverAddr string) (*ClientSession, error) {
+func InitSession(clientID api.ClientID) (*ClientSession, error) {
 	// Initialize a session.
 	sess := &ClientSession{
 		clientID:     clientID,
-		serverAddr:   serverAddr,
 		startTime:    time.Now(),
 		leaseLength:  DefaultLeaseDuration,
 		locks:		  make(map[api.FilePath]api.LockMode),
@@ -59,29 +58,30 @@ func InitSession(clientID api.ClientID, serverAddr string) (*ClientSession, erro
 		logger:       log.New(os.Stderr, "[client] ", log.LstdFlags),
 	}
 
-	sess.logger.Printf("session with %s initialized at client", serverAddr)
+	// Find leader by trying to establish a session with any of the
+	// possible server addresses.
+	for serverAddr := range PossibleServerAddrs {
+		// Try to set up TCP connection to server.
+		rpcClient, err := rpc.Dial("tcp", serverAddr)
+		if err != nil {
+			continue
+		}
 
-	// Call InitSession at server.
-	// Set up TCP connection to serverAddr.
-	rpcClient, err := rpc.Dial("tcp", serverAddr)
-	if err != nil {
-		return nil, err
-	}
-	sess.rpcClient = rpcClient
+		// Make RPC call.
+		sess.logger.Printf("Sending InitSession request to server %s", serverAddr)
+		req := api.InitSessionRequest{ClientID: clientID}
+		resp := &api.InitSessionResponse{}
+		err = rpcClient.Call("Handler.InitSession", req, resp)
+		if err != nil {
+			sess.logger.Printf("InitSession with server %s failed with error %s", serverAddr, err.Error())
+		} else {
+			sess.logger.Printf("Session with %s initialized at client", serverAddr)
 
-	// Make RPC call.
-	req := api.InitSessionRequest{ClientID: clientID}
-	resp := &api.InitSessionResponse{}
-	err = rpcClient.Call("Handler.InitSession", req, resp)
-	if err != nil {
-		return nil, err
-	}
-
-	// If the response is that the node at the address is not the leader,
-	// try to send an InitSession to the leader.
-	if resp.LeaderAddress != serverAddr {
-		sess.logger.Printf("%s is not leader: calling InitSession to server %s", serverAddr, resp.LeaderAddress)
-		return InitSession(clientID, resp.LeaderAddress)
+			// Update session info.
+			sess.serverAddr = serverAddr
+			sess.rpcClient = rpcClient
+			break
+		}
 	}
 
 	// Call MonitorSession.
@@ -167,7 +167,7 @@ func (sess *ClientSession) MonitorSession() {
 
 				resp := &api.KeepAliveResponse{}
 
-				for {  // Keep trying until we get a response
+				for {  // Keep trying all servers: this way we can wait for cell to elect a new leader.
 					select {
 						case <- quitChan:
 							return

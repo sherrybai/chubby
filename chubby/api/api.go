@@ -28,7 +28,6 @@ type InitSessionRequest struct {
 }
 
 type InitSessionResponse struct {
-	LeaderAddress string
 }
 
 type KeepAliveRequest struct {

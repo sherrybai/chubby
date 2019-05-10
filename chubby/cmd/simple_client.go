@@ -12,13 +12,7 @@ import (
 	"syscall"
 )
 
-var (
-	clientID		string		// ID of this client.
-)
-
-const DefaultServerAddr = ":5379"
-
-var ServerAddrs = [...]string {":5379", ":6379", ":7379", ":8379", ":9379"}
+var clientID		string		// ID of this client.
 
 func init() {
 	flag.StringVar(&clientID, "clientID", "simple_client_1", "ID of this client")
@@ -31,10 +25,7 @@ func main() {
 	quitCh := make(chan os.Signal, 1)
 	signal.Notify(quitCh, os.Kill, os.Interrupt, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
-	_, err := client.InitSession(
-		api.ClientID(clientID),
-		DefaultServerAddr)
-
+	_, err := client.InitSession(api.ClientID(clientID))
 	if err != nil {
 		log.Fatal(err)
 	}

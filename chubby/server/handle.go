@@ -41,16 +41,13 @@ func (h *Handler) Join(req JoinRequest, res *JoinResponse) error {
 
 // Initialize a client-server session.
 func (h *Handler) InitSession(req api.InitSessionRequest, res *api.InitSessionResponse) error {
-	//if app.address != string(app.store.Raft.Leader()) {
-	//	res.LeaderAddress = string(app.store.Raft.Leader())
-	//	return nil
-	//}
-	_, err := CreateSession(api.ClientID(req.ClientID))
-	if err != nil {
-		return err
+	// If a non-leader node receives an InitSession, return error
+	if app.store.RaftBind != string(app.store.Raft.Leader()) {
+		return errors.New(fmt.Sprintf("Node %s is not the leader", app.address))
 	}
-	res.LeaderAddress = app.address
-	return nil
+
+	_, err := CreateSession(api.ClientID(req.ClientID))
+	return err
 }
 
 // KeepAlive calls allow the client to extend the Chubby session.
@@ -77,29 +74,26 @@ func (h *Handler) KeepAlive(req api.KeepAliveRequest, res *api.KeepAliveResponse
 		app.logger.Printf("New session for client %s created", req.ClientID)
 
 		// For each lock in the KeepAlive, try to acquire the lock
-		// If any of the acquires fail, terminate the session and return error
+		// If any of the acquires fail, terminate the session.
 		for filePath, lockMode := range(req.Locks) {
 			ok, err := sess.TryAcquireLock(filePath, lockMode)
+			if err != nil {
+				// Don't return an error because the session won't terminate!
+				app.logger.Printf("Error when client %s acquiring lock at %s: %s", req.ClientID, filePath, err.Error())
+			}
 			if !ok {
 				app.logger.Printf("Jeopardy client %s failed to acquire lock at %s", req.ClientID, filePath)
-
 				// This should cause the KeepAlive response to return that session should end.
 				sess.TerminateSession()
-				if err != nil {
-					return errors.New(fmt.Sprintf("Failed to acquire lock at %s with error: %s", err.Error()))
-				} else {
-					return errors.New(fmt.Sprintf("Failed to acquire lock at %s", filePath))
-				}
+
+				return nil // Don't return an error because the session won't terminate!
 			}
 		}
 
 		app.logger.Printf("Finished jeopardy KeepAlive process for client %s", req.ClientID)
 	}
 
-	duration, err := sess.KeepAlive(req.ClientID)
-	if err != nil {
-		return err
-	}
+	duration := sess.KeepAlive(req.ClientID)
 	res.LeaseLength = duration
 	return nil
 }
