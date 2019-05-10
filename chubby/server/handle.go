@@ -55,15 +55,15 @@ func (h *Handler) InitSession(req api.InitSessionRequest, res *api.InitSessionRe
 
 // KeepAlive calls allow the client to extend the Chubby session.
 func (h *Handler) KeepAlive(req api.KeepAliveRequest, res *api.KeepAliveResponse) error {
-	//// If a non-leader node receives a KeepAlive, return error
-	//if app.address != string(app.store.Raft.Leader()) {
-	//	return errors.New(fmt.Sprintf("Node %s is not the leader", app.address))
-	//}
+	// If a non-leader node receives a KeepAlive, return error
+	if app.store.RaftBind != string(app.store.Raft.Leader()) {
+		return errors.New(fmt.Sprintf("Node %s is not the leader", app.address))
+	}
 
-	// TODO: change this to handle failovers
 	sess, ok := app.sessions[req.ClientID]
 	if !ok {
-		return errors.New(fmt.Sprintf("No session exists for %s", req.ClientID))
+		// Probably a jeopardy KeepAlive: grab new session info from client
+
 	}
 
 	duration, err := sess.KeepAlive(req.ClientID)

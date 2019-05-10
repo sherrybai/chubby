@@ -33,6 +33,9 @@ type InitSessionResponse struct {
 
 type KeepAliveRequest struct {
 	ClientID ClientID
+	// Session information:
+	LeaseLength	time.Duration  // Length of the lease so far.
+	Locks		map[FilePath]LockMode  // Locks held by the client.
 }
 
 type KeepAliveResponse struct {

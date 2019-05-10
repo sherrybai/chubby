@@ -129,12 +129,57 @@ func (sess *ClientSession) MonitorSession() {
 			sess.jeopardyFlag = true
 			sess.logger.Printf("session with %s in jeopardy", sess.serverAddr)
 
-			// TODO:
 			// In a new goroutine, try to send a KeepAlive to every other server.
 			// KeepAlive should check if the node is the master -> if not, ignore.
 			// In KeepAlive request, eagerly send session information to server (leaseLength, locks)
 			// Update session serverAddr.
+			go func() {
+				// TODO:
+				// Jeopardy KeepAlives should allow client to eagerly send info
+				// to help new leader rebuild in-mem structs
+				req := api.KeepAliveRequest{
+					ClientID: sess.clientID,
+				}
 
+				resp := &api.KeepAliveResponse{}
+
+				for serverAddr := range PossibleServerAddrs {
+					// Skip over current server address
+					if serverAddr == sess.serverAddr {
+						continue
+					}
+
+					// Try to connect to server
+					rpcClient, err := rpc.Dial("tcp", serverAddr)
+					if err != nil {
+						sess.logger.Printf("could not dial address %s", serverAddr)
+						continue
+					}
+
+					// Try to send KeepAlive to server
+					sess.logger.Printf("sending KeepAlive to server %s", serverAddr)
+					err = rpcClient.Call("Handler.KeepAlive", req, resp)
+					if err == nil {
+						// Successfully contacted new leader!
+						sess.logger.Printf("received KeepAlive resp from server %s", serverAddr)
+
+						// Update session details
+						sess.serverAddr = serverAddr
+						sess.rpcClient = rpcClient
+
+						// Send response onto channel
+						keepAliveChan <- resp
+
+						break  // Avoid closing new rpc client
+					} else {
+						sess.logger.Printf("KeepAlive error from server at %s: %s", serverAddr, err.Error())
+					}
+
+					rpcClient.Close()
+				}
+			}()
+
+			// Wait for responses.
 			select {
 			case resp := <- keepAliveChan:
 				// Session is saved! Unblock all the requests
