@@ -119,6 +119,7 @@ func (sess *ClientSession) MonitorSession() {
 			resp := &api.KeepAliveResponse{}
 
 			sess.logger.Printf("Sending KeepAlive to server %s", sess.serverAddr)
+			sess.logger.Printf("Client ID is %s", string(sess.clientID))
 			err := sess.rpcClient.Call("Handler.KeepAlive", req, resp)
 			if err != nil {
 				sess.logger.Printf("rpc call error: %s", err.Error())
