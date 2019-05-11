@@ -332,7 +332,7 @@ func (sess *Session) ReleaseLock (path api.FilePath) (error) {
 	switch lock.mode {
 	case api.FREE:
 		// Throw an error: this means TryAcquire was not implemented correctly
-		return errors.New("Lock has FREE mode: acquire not implemented correctly")
+		return errors.New(fmt.Sprint("Lock at %s has FREE mode: acquire not implemented correctly Client ID %s", path, sess.clientID))
 	case api.EXCLUSIVE:
 		// Delete from lock owners
 		delete(lock.owners, sess.clientID)

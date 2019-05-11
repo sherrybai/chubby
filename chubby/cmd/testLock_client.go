@@ -130,6 +130,7 @@ func main() {
 		log.Printf("Delete Lock Should Fail because %s is trying to delete a lock it holds in Shared mode", clientID1)
 	}
 
+
 	// Test release lock
 	releaseErr = sess1.ReleaseLock("LOCK/Lock1")
 	if releaseErr != nil {
