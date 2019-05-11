@@ -344,6 +344,7 @@ func (sess *Session) ReleaseLock (path api.FilePath) (error) {
 
 		// Delete lock from session locks map
 		delete(sess.locks, path)
+		app.locks[path] = lock
 
 		// Return without error
 		return nil
@@ -358,6 +359,7 @@ func (sess *Session) ReleaseLock (path api.FilePath) (error) {
 
 		// Delete lock from session locks map
 		delete(sess.locks, path)
+		app.locks[path] = lock
 
 		// Return without error
 		return nil
