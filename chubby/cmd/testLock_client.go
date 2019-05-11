@@ -104,6 +104,12 @@ func main() {
 		log.Printf("Should fail because the lock we are trying to release is a lock we don't own")
 	}
 
+	// Should not be able to delete a lock you don't own
+	deleteErr := sess2.DeleteLock("LOCK/Lock1")
+	if deleteErr == nil {
+		log.Printf("Delete Lock Should Fail because %s is trying to delete a lock it doesn't own", clientID2)
+	}
+
 	// Test release lock
 	releaseErr = sess1.ReleaseLock("LOCK/Lock1")
 	if releaseErr != nil {
@@ -112,6 +118,36 @@ func main() {
 	}
 
 	// Test Delete Lock
+	deleteErr = sess1.DeleteLock("LOCK/Lock1")
+	if deleteErr == nil {
+		log.Printf("Delete Lock Should Fail because %s is trying to delete a lock it doesn't hold", clientID1)
+	}
+
+	isSuccessful, acquireErr = sess1.TryAcquireLock("LOCK/Lock1", api.SHARED)
+	// Test Delete Lock
+	deleteErr = sess1.DeleteLock("LOCK/Lock1")
+	if deleteErr == nil {
+		log.Printf("Delete Lock Should Fail because %s is trying to delete a lock it holds in Shared mode", clientID1)
+	}
+
+	// Test release lock
+	releaseErr = sess1.ReleaseLock("LOCK/Lock1")
+	if releaseErr != nil {
+		log.Printf("Unexpected Lock release failure")
+		log.Fatal(releaseErr)
+	}
+
+	deleteErr = sess1.DeleteLock("LOCK/Lock1")
+	if deleteErr != nil {
+		log.Printf("Unexpected Delete err", clientID1)
+		log.Fatal(deleteErr)
+	}
+
+	// Test release lock
+	releaseErr = sess1.ReleaseLock("LOCK/Lock1")
+	if releaseErr == nil {
+		log.Printf("Should fail because trying to release a lock that doesn't exist")
+	}
 
 
 	if err != nil {
