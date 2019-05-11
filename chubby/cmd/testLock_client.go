@@ -146,7 +146,7 @@ func main() {
 	}
 	isSuccessful, acquireErr = sess1.TryAcquireLock("LOCK/Lock1", api.EXCLUSIVE)
 	if !isSuccessful {
-		log.Printf("Unexpected Acquire Failure")
+		log.Printf("Unexpected Exclusive Acquire Failure at lock path %s", "LOCK/Lock1")
 	}
 	if acquireErr != nil {
 		log.Fatal(acquireErr)
