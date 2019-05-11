@@ -23,7 +23,7 @@ func init() {
 // Adapted from: https://coderwall.com/p/cp5fya/measuring-execution-time-in-go
 func timeTrack(start time.Time, name string) {
 	elapsed := time.Since(start)
-	fmt.Printf("Start Time is %s\n", start.Second())
+	fmt.Printf("Start Time is %d\n", start.Nanosecond())
 	fmt.Printf("%s latency: %s\n", name, elapsed)
 }
 
