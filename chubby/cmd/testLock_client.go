@@ -136,10 +136,10 @@ func main() {
 		log.Printf("Unexpected Lock release failure")
 		log.Fatal(releaseErr)
 	}
-
+	isSuccessful, acquireErr = sess1.TryAcquireLock("LOCK/Lock1", api.EXCLUSIVE)
 	deleteErr = sess1.DeleteLock("LOCK/Lock1")
 	if deleteErr != nil {
-		log.Printf("Unexpected Delete err", clientID1)
+		log.Printf("Unexpected Delete err %s", clientID1)
 		log.Fatal(deleteErr)
 	}
 
