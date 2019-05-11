@@ -12,10 +12,10 @@ import (
 	"syscall"
 )
 
-var clientID		string		// ID of this client.
+var simple_client_id		string		// ID of this client.
 
 func init() {
-	flag.StringVar(&clientID, "clientID", "simple_client_1", "ID of this client")
+	flag.StringVar(&simple_client_id, "clientID", "simple_client", "ID of this client")
 }
 
 func main() {
@@ -24,9 +24,8 @@ func main() {
 
 	quitCh := make(chan os.Signal, 1)
 	signal.Notify(quitCh, os.Kill, os.Interrupt, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	_, err := client.InitSession(api.ClientID(clientID))
 
-
+	_, err := client.InitSession(api.ClientID(simple_client_id))
 	if err != nil {
 		log.Fatal(err)
 	}
