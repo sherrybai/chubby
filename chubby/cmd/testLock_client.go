@@ -34,18 +34,24 @@ func main() {
 	errOpenLock2 := sess2.OpenLock("LOCK/Lock2")
 
 	if errOpenLock1 != nil {
-		log.Printf("Session 1 has trouble opening lock")
+		log.Printf("Session 1 has trouble opening lock ")
 		log.Fatal(errOpenLock1)
+	} else {
+		log.Printf("Session 1 has opened lock successfully")
 	}
 	if errOpenLock2 != nil {
 		log.Printf("Session 2 has trouble opening lock")
 		log.Fatal(errOpenLock2)
+	} else {
+		log.Printf("Session 2 has opened lock successfully")
 	}
 
 	errOpenLock1 = sess1.OpenLock("LOCK/LockShared")
 	if errOpenLock1 != nil {
 		log.Printf("Session 1 has trouble opening lock")
 		log.Fatal(errOpenLock1)
+	} else {
+		log.Printf("Session 1 has opened lock successfully")
 	}
 
 	// Test TryAcquire Lock

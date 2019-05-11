@@ -300,7 +300,7 @@ func (sess *Session) ReleaseLock (path api.FilePath) (error) {
 	_, err := app.store.Get(string(path))
 
 	if err != nil {
-		return errors.New(fmt.Sprintf("Lock at %s does not exist in persistent store", path))
+		return errors.New(fmt.Sprintf("Client with id %s: Lock at %s does not exist in persistent store", path, sess.clientID))
 	}
 
 	// Check if we own the lock.
