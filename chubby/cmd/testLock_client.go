@@ -95,10 +95,10 @@ func main() {
 	// Should not be able to acquire a lock someone else acquired in exclusive mode
 	isSuccessful, acquireErr = sess2.TryAcquireLock("LOCK/Lock1", api.EXCLUSIVE)
 	if isSuccessful {
-		log.Printf("Session 2 Should fail because the lock we are trying to acquire is in exclusive mode")
+		log.Printf("Session 2 Should fail but successfuly because the lock we are trying to acquire is in exclusive mode")
 	}
 	if acquireErr == nil {
-		log.Printf("Session 2 Should fail because the lock we are trying to acquire is in exclusive mode")
+		log.Printf("Session 2 Should fail but no error because the lock we are trying to acquire is in exclusive mode")
 	}
 
 	// Should not be able to release a lock you don't own
