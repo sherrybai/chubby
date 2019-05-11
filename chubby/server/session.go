@@ -250,11 +250,13 @@ func (sess *Session) TryAcquireLock (path api.FilePath, mode api.LockMode) (bool
 			return false, errors.New("Lock has EXCLUSIVE mode but has multiple owners")
 		} else {
 			// Fail with no error
+			app.logger.Printf("Failed to acquire lock %s: already held in EXCLUSIVE mode", path)
 			return false, nil
 		}
 	case api.SHARED:
 		// If our mode is api.SHARED, then succeed; else fail
 		if mode == api.EXCLUSIVE {
+			app.logger.Printf("Failed to acquire lock %s in EXCLUSIVE mode: already held in SHARED mode", path)
 			return false, nil
 		} else {  // mode == api.SHARED
 			// Update lock owners
@@ -264,6 +266,7 @@ func (sess *Session) TryAcquireLock (path api.FilePath, mode api.LockMode) (bool
 			sess.locks[path] = lock
 
 			// Return success
+			//app.logger.Printf("Lock %s acquired successfully with mode SHARED", path)
 			return true, nil
 		}
 	case api.FREE:
@@ -283,6 +286,11 @@ func (sess *Session) TryAcquireLock (path api.FilePath, mode api.LockMode) (bool
 		sess.locks[path] = lock
 
 		// Return success
+		//if mode == api.SHARED {
+		//	app.logger.Printf("Lock %s acquired successfully with mode SHARED", path)
+		//} else {
+		//	app.logger.Printf("Lock %s acquired successfully with mode EXCLUSIVE", path)
+		//}
 		return true, nil
 	default:
 		return false, errors.New(fmt.Sprintf("Lock at %s has undefined mode %d", path, lock.mode))
@@ -298,7 +306,7 @@ func (sess *Session) ReleaseLock (path api.FilePath) (error) {
 		return errors.New(fmt.Sprintf("Lock at %s does not exist in persistent store", path))
 	}
 
-	// Check if we own the lock.
+	// Grab lock struct from session locks map.
 	lock, present := sess.locks[path]
 
 	// If not in session locks map, throw an error

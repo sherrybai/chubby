@@ -47,6 +47,18 @@ services:
         networks:
             static-network:
                 ipv4_address: 172.20.128.5
+
+    client:
+        build:
+            context: .
+            dockerfile: Dockerfile.client_fast_reqs
+        restart: on-failure
+        depends_on:
+            - "node1"
+        networks:
+            static-network:
+                ipv4_address: 172.20.192.1
+
 networks:
     static-network:
         ipam:

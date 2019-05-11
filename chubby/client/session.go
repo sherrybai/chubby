@@ -169,6 +169,7 @@ func (sess *ClientSession) MonitorSession() {
 				}
 
 				for filePath, lockMode := range sess.locks {
+					sess.logger.Printf("Add lock %s to KeepAlive session info", filePath)
 					req.Locks[filePath] = lockMode
 				}
 
@@ -320,14 +321,20 @@ func (sess *ClientSession) TryAcquireLock(filePath api.FilePath, mode api.LockMo
 			return false, errors.New(fmt.Sprintf("session with %s expired", sess.serverAddr))
 		}
 	}
-	sess.logger.Printf("Sending TryAcquireLock request to server %s", sess.serverAddr)
+	_, ok := sess.locks[filePath]
+	if ok {
+		return false, errors.New(fmt.Sprintf("Client already owns the lock %s", filePath))
+	}
+
+	//sess.logger.Printf("Sending TryAcquireLock request to server %s", sess.serverAddr)
 	req := api.TryAcquireLockRequest{ClientID: sess.clientID, Filepath: filePath, Mode: mode}
 	resp := &api.TryAcquireLockResponse{}
 	err := sess.rpcClient.Call("Handler.TryAcquireLock", req, resp)
 	if err != nil {
-		sess.logger.Printf("TryAcquireLock with server %s failed with error %s", sess.serverAddr, err.Error())
-	} else {
-		sess.logger.Printf("TryAcquireLock successful at filepath %s in session with %s with mode %s", filePath, sess.serverAddr, string(mode))
+		sess.logger.Printf("TryAcquireLock for lock %s failed with error %s", filePath, err.Error())
+	}
+	if resp.IsSuccessful {
+		sess.locks[filePath] = mode
 	}
 	return resp.IsSuccessful, err
 }
@@ -342,15 +349,17 @@ func (sess *ClientSession) ReleaseLock(filePath api.FilePath) error {
 			return errors.New(fmt.Sprintf("session with %s expired", sess.serverAddr))
 		}
 	}
-	sess.logger.Printf("Sending ReleaseLock request to server %s", sess.serverAddr)
+	_, ok := sess.locks[filePath]
+	if !ok {
+		return errors.New(fmt.Sprintf("Client does not own the lock %s", filePath))
+	}
+
+	//sess.logger.Printf("Sending ReleaseLock request to server %s", sess.serverAddr)
 	req := api.ReleaseLockRequest{ClientID: sess.clientID, Filepath: filePath}
 	resp := &api.ReleaseLockResponse{}
 	err := sess.rpcClient.Call("Handler.ReleaseLock", req, resp)
 	if err != nil {
-		sess.logger.Printf("ReleaseLock with server %s failed with error %s", sess.serverAddr, err.Error())
-	} else {
-		sess.logger.Printf("Release Lock successfully at filepath %s in session with %s", filePath, sess.serverAddr)
+		delete(sess.locks, filePath)
 	}
 	return err
 }
-

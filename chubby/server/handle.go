@@ -88,6 +88,7 @@ func (h *Handler) KeepAlive(req api.KeepAliveRequest, res *api.KeepAliveResponse
 
 				return nil // Don't return an error because the session won't terminate!
 			}
+			app.logger.Printf("Lock %s reacquired successfully.", filePath)
 		}
 
 		app.logger.Printf("Finished jeopardy KeepAlive process for client %s", req.ClientID)
