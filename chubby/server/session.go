@@ -351,7 +351,7 @@ func (sess *Session) ReleaseLock (path api.FilePath) (error) {
 		delete(lock.owners, sess.clientID)
 
 		// Set lock mode if no more owners
-		if len(lock.owners) == 1 {
+		if len(lock.owners) == 0 {
 			lock.mode = api.FREE
 		}
 
