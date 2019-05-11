@@ -97,9 +97,6 @@ func main() {
 	if isSuccessful {
 		log.Printf("Session 2 Should fail but successfuly because the lock we are trying to acquire is in exclusive mode")
 	}
-	if acquireErr == nil {
-		log.Printf("Session 2 Should fail but no error because the lock we are trying to acquire is in exclusive mode")
-	}
 
 	// Should not be able to release a lock you don't own
 	releaseErr := sess2.ReleaseLock("LOCK/Lock1")

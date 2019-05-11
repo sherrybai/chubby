@@ -257,7 +257,7 @@ func (sess *Session) TryAcquireLock (path api.FilePath, mode api.LockMode) (bool
 			return false, errors.New("Lock has EXCLUSIVE mode but has multiple owners")
 		} else {
 			// Fail with no error
-			sess.logger.Printf("Failed to acquire lock %s: already held in EXCLUSIVE mode", path)
+			app.logger.Printf("Failed to acquire lock %s: already held in EXCLUSIVE mode", path)
 			return false, nil
 		}
 	case api.SHARED:
