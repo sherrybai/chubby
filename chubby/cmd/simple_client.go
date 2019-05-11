@@ -26,8 +26,6 @@ func main() {
 	signal.Notify(quitCh, os.Kill, os.Interrupt, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	_, err := client.InitSession(api.ClientID(simple_client_id))
-
-
 	if err != nil {
 		log.Fatal(err)
 	}

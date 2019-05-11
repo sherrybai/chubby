@@ -4,6 +4,7 @@ import (
 	"cos518project/chubby/api"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/rpc"
 	"os"
@@ -280,7 +281,15 @@ func (sess *ClientSession) OpenLock(filePath api.FilePath) error {
 	sess.logger.Printf("Sending OpenLock request to server %s", sess.serverAddr)
 	req := api.OpenLockRequest{ClientID: sess.clientID, Filepath: filePath}
 	resp := &api.OpenLockResponse{}
-	err := sess.rpcClient.Call("Handler.OpenLock", req, resp)
+
+	var err error
+	for {  // If we get a connection problem, keep trying.
+		err = sess.rpcClient.Call("Handler.OpenLock", req, resp)
+		if err != io.ErrUnexpectedEOF {
+			break
+		}
+	}
+
 	if err != nil {
 		sess.logger.Printf("OpenLock with server %s failed with error %s", sess.serverAddr, err.Error())
 	} else {
@@ -302,7 +311,14 @@ func (sess *ClientSession) DeleteLock(filePath api.FilePath) error {
 	sess.logger.Printf("Sending DeleteLock request to server %s", sess.serverAddr)
 	req := api.DeleteLockRequest{ClientID: sess.clientID, Filepath: filePath}
 	resp := &api.DeleteLockResponse{}
-	err := sess.rpcClient.Call("Handler.DeleteLock", req, resp)
+
+	var err error
+	for {  // If we get a connection problem, keep trying.
+		err = sess.rpcClient.Call("Handler.DeleteLock", req, resp)
+		if err != io.ErrUnexpectedEOF {
+			break
+		}
+	}
 	if err != nil {
 		sess.logger.Printf("DeleteLock with server %s failed with error %s", sess.serverAddr, err.Error())
 	} else {
@@ -311,7 +327,7 @@ func (sess *ClientSession) DeleteLock(filePath api.FilePath) error {
 	return err
 }
 
-func (sess *ClientSession) TryAcquireLock(filePath api.FilePath, mode api.LockMode) (bool,error) {
+func (sess *ClientSession) TryAcquireLock(filePath api.FilePath, mode api.LockMode) (bool, error) {
 	if sess.jeopardyFlag {
 		durationJeopardyOver := time.Until(sess.startTime.Add(sess.leaseLength + JeopardyDuration))
 		select {
@@ -329,10 +345,15 @@ func (sess *ClientSession) TryAcquireLock(filePath api.FilePath, mode api.LockMo
 	//sess.logger.Printf("Sending TryAcquireLock request to server %s", sess.serverAddr)
 	req := api.TryAcquireLockRequest{ClientID: sess.clientID, Filepath: filePath, Mode: mode}
 	resp := &api.TryAcquireLockResponse{}
-	err := sess.rpcClient.Call("Handler.TryAcquireLock", req, resp)
-	if err != nil {
-		sess.logger.Printf("TryAcquireLock for lock %s failed with error %s", filePath, err.Error())
+
+	var err error
+	for {  // If we get a connection problem, keep trying.
+		err = sess.rpcClient.Call("Handler.TryAcquireLock", req, resp)
+		if err != io.ErrUnexpectedEOF {
+			break
+		}
 	}
+
 	if resp.IsSuccessful {
 		sess.locks[filePath] = mode
 	}
@@ -357,7 +378,15 @@ func (sess *ClientSession) ReleaseLock(filePath api.FilePath) error {
 	//sess.logger.Printf("Sending ReleaseLock request to server %s", sess.serverAddr)
 	req := api.ReleaseLockRequest{ClientID: sess.clientID, Filepath: filePath}
 	resp := &api.ReleaseLockResponse{}
-	err := sess.rpcClient.Call("Handler.ReleaseLock", req, resp)
+
+	var err error
+	for {  // If we get a connection problem, keep trying.
+		err = sess.rpcClient.Call("Handler.ReleaseLock", req, resp)
+		if err != io.ErrUnexpectedEOF {
+			break
+		}
+	}
+
 	if err == nil {
 		delete(sess.locks, filePath)
 	}

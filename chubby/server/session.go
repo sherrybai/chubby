@@ -230,6 +230,8 @@ func (sess *Session) TryAcquireLock (path api.FilePath, mode api.LockMode) (bool
 		// Assume that some failure has occurred
 		// Lazily recover lock struct: add lock to in-memory struct of locks
 		// TODO: check if this is correct?
+		app.logger.Printf("Lock Doesn't Exist with Client ID", sess.clientID)
+
 		app.locks[path] = &Lock{
 			path: path,
 			mode: api.FREE,
@@ -284,6 +286,9 @@ func (sess *Session) TryAcquireLock (path api.FilePath, mode api.LockMode) (bool
 
 		// Add lock to session lock struct
 		sess.locks[path] = lock
+
+		// Update Lock Mode in the global Map
+		app.locks[path] = lock
 
 		// Return success
 		//if mode == api.SHARED {

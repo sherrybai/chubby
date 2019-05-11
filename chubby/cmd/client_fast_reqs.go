@@ -63,7 +63,6 @@ func main() {
 
 			if err != nil {
 				log.Printf("TryAcquire failed with error: %s\n", err.Error())
-				return
 				continue
 			}
 			if !ok {
