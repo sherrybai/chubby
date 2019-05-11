@@ -137,6 +137,12 @@ func main() {
 		log.Fatal(releaseErr)
 	}
 	isSuccessful, acquireErr = sess1.TryAcquireLock("LOCK/Lock1", api.EXCLUSIVE)
+	if !isSuccessful {
+		log.Printf("Unexpected Acquire Failure")
+	}
+	if acquireErr != nil {
+		log.Fatal(acquireErr)
+	}
 	deleteErr = sess1.DeleteLock("LOCK/Lock1")
 	if deleteErr != nil {
 		log.Printf("Unexpected Delete err %s", clientID1)
