@@ -124,6 +124,13 @@ func main() {
 	}
 
 	isSuccessful, acquireErr = sess1.TryAcquireLock("LOCK/Lock1", api.SHARED)
+
+	if !isSuccessful {
+		log.Printf("Unexpected Failure to Acquire Lock in Shared Mode")
+	}
+	if acquireErr != nil {
+		log.Fatal(acquireErr)
+	}
 	// Test Delete Lock
 	deleteErr = sess1.DeleteLock("LOCK/Lock1")
 	if deleteErr == nil {
