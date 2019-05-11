@@ -11,12 +11,19 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 var client_fast_reqs_id		string		// ID of this client.
 
 func init() {
 	flag.StringVar(&client_fast_reqs_id, "clientID", "client_fast_reqs", "ID of this client")
+}
+
+// Adapted from: https://coderwall.com/p/cp5fya/measuring-execution-time-in-go
+func timeTrack(start time.Time, name string) {
+	elapsed := time.Since(start)
+	fmt.Printf("%s latency: %s\n", name, elapsed)
 }
 
 func main() {
@@ -41,8 +48,8 @@ func main() {
 
 	fmt.Println("Begin acquiring and releasing locks.")
 
+	var startTime time.Time
 
-	shouldAcquire := true
 	for {
 		select {
 		case <- quitCh:
@@ -50,25 +57,27 @@ func main() {
 			return
 
 		default:
-			if shouldAcquire {
-				ok, err := sess.TryAcquireLock(lockName, api.SHARED)
-				if err != nil {
-					continue
-				}
-				if !ok {
-					fmt.Println("Failed to acquire lock. Continuing.")
-					continue
-				}
-				shouldAcquire = false
+			startTime = time.Now()
+			ok, err := sess.TryAcquireLock(lockName, api.SHARED)
+			timeTrack(startTime, "TryAcquire")
+
+			if err != nil {
+				log.Printf("TryAcquire failed with error: %s\n", err.Error())
+				return
+				continue
+			}
+			if !ok {
+				log.Println("Failed to acquire lock. Continuing.")
+				continue
 			}
 
-			if !shouldAcquire {
-				err = sess.ReleaseLock(lockName)
-				if err != nil {
-					fmt.Printf("Release failed with error: %s\n", err.Error())
-					continue
-				}
-				shouldAcquire = true
+			startTime = time.Now()
+			err = sess.ReleaseLock(lockName)
+			timeTrack(startTime, "Release")
+
+			if err != nil {
+				log.Printf("Release failed with error: %s\n", err.Error())
+				continue
 			}
 		}
 	}

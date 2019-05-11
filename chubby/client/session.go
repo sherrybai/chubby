@@ -358,7 +358,7 @@ func (sess *ClientSession) ReleaseLock(filePath api.FilePath) error {
 	req := api.ReleaseLockRequest{ClientID: sess.clientID, Filepath: filePath}
 	resp := &api.ReleaseLockResponse{}
 	err := sess.rpcClient.Call("Handler.ReleaseLock", req, resp)
-	if err != nil {
+	if err == nil {
 		delete(sess.locks, filePath)
 	}
 	return err
