@@ -284,6 +284,9 @@ func (sess *Session) TryAcquireLock (path api.FilePath, mode api.LockMode) (bool
 		// Add lock to session lock struct
 		sess.locks[path] = lock
 
+		// Update Lock Mode in the global Map
+		app.locks[path] = lock
+
 		// Return success
 		return true, nil
 	default:
