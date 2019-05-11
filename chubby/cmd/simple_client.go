@@ -24,7 +24,6 @@ func main() {
 
 	quitCh := make(chan os.Signal, 1)
 	signal.Notify(quitCh, os.Kill, os.Interrupt, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-
 	_, err := client.InitSession(api.ClientID(clientID))
 
 
