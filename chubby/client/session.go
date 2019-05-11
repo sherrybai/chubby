@@ -76,6 +76,14 @@ func InitSession(clientID api.ClientID) (*ClientSession, error) {
 		req := api.InitSessionRequest{ClientID: clientID}
 		resp := &api.InitSessionResponse{}
 		err = rpcClient.Call("Handler.InitSession", req, resp)
+		if err == io.ErrUnexpectedEOF {
+			for {
+				err = rpcClient.Call("Handler.InitSession", req, resp)
+				if err != io.ErrUnexpectedEOF {
+					break
+				}
+			}
+		}
 		if err != nil {
 			sess.logger.Printf("InitSession with server %s failed with error %s", serverAddr, err.Error())
 		} else {
