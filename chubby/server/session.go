@@ -54,7 +54,7 @@ type Lock struct {
 func CreateSession(clientID api.ClientID) (*Session, error) {
 	sess, ok := app.sessions[clientID]
 
-	if ok && !sess.terminated {
+	if ok  {
 		return nil, errors.New(fmt.Sprintf("The client already has a session established with the master"))
 	}
 
