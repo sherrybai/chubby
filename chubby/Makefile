@@ -19,4 +19,4 @@ test_client:
 	go build -o test_client cmd/testLock_client.go
 
 leader_election_client1:
-    go build -o leader_election_client1 cmd/leader_election.go
+	go build -o leader_election_client1 cmd/leader_election.go
