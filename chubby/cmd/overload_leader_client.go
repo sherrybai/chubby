@@ -98,7 +98,10 @@ func main () {
 				log.Printf("Release failed with error: %s\n", err.Error())
 				continue
 			}
-			counter += 1
+			if err == nil {
+				counter += 1
+			}
+
 		}
 	}
 
