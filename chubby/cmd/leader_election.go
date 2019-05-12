@@ -47,13 +47,22 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	<-  time.After(55 * time.Second)
 	err = sess.ReleaseLock("Lock/Lock1")
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Done Releasing Lock")
 	quitCh <- os.Kill
+	select {
+	case <- quitCh:
+		return
+	case <-  time.After(55 * time.Second):
+		err = sess.ReleaseLock("Lock/Lock1")
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("Done Releasing Lock")
+	}
+
 	// Exit on signal.
 	<-quitCh
 }
