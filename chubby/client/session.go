@@ -401,3 +401,7 @@ func (sess *ClientSession) ReleaseLock(filePath api.FilePath) error {
 	}
 	return err
 }
+
+func (sess *ClientSession) IsExpired() bool {
+	return sess.expired
+}

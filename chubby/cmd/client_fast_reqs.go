@@ -23,7 +23,7 @@ func init() {
 // Adapted from: https://coderwall.com/p/cp5fya/measuring-execution-time-in-go
 func timeTrack(start time.Time, name string) {
 	elapsed := time.Since(start)
-	fmt.Printf("Start Time is %d\n", start.Second())
+	fmt.Printf("Start Time is %s\n", start.String())
 	fmt.Printf("%s latency: %s\n", name, elapsed)
 }
 
@@ -63,6 +63,14 @@ func main() {
 			timeTrack(startTime, "TryAcquire")
 
 			if err != nil {
+				if sess.IsExpired() {
+					sess, err = client.InitSession(api.ClientID(client_fast_reqs_id))
+					if err != nil {
+						log.Fatal(err)
+					} else {
+						continue
+					}
+				}
 				log.Printf("TryAcquire failed with error: %s\n", err.Error())
 				//continue
 			}
