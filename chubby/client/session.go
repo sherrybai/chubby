@@ -346,10 +346,10 @@ func (sess *ClientSession) TryAcquireLock(filePath api.FilePath, mode api.LockMo
 			return false, errors.New(fmt.Sprintf("session with %s expired", sess.serverAddr))
 		}
 	}
-	_, ok := sess.locks[filePath]
+	/*_, ok := sess.locks[filePath]
 	if ok {
 		return false, errors.New(fmt.Sprintf("Client already owns the lock %s", filePath))
-	}
+	}*/
 
 	//sess.logger.Printf("Sending TryAcquireLock request to server %s", sess.serverAddr)
 	req := api.TryAcquireLockRequest{ClientID: sess.clientID, Filepath: filePath, Mode: mode}
