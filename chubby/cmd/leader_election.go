@@ -29,7 +29,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	errOpenLock := sess.OpenLock("LOCK/Lock1")
+	errOpenLock := sess.OpenLock("Lock/Lock1")
 	if errOpenLock != nil {
 		log.Fatal(errOpenLock)
 	}
