@@ -51,7 +51,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	} else {
-		fmt.Println(content)
+		fmt.Printf("Read Content is %s\n",content)
 	}
 	quitCh <- os.Kill
 	select {
