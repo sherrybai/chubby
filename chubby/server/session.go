@@ -4,12 +4,11 @@
 package server
 
 import (
-	"encoding/json"
+	"cos518project/chubby/api"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
-	"cos518project/chubby/api"
 )
 
 const DefaultLeaseExt = 12 * time.Second
