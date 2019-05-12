@@ -25,7 +25,7 @@ func main() {
 	quitCh := make(chan os.Signal, 1)
 	signal.Notify(quitCh, os.Kill, os.Interrupt, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
-	sess, err := client.InitSession(api.ClientID(simple_client_id))
+	sess, err := client.InitSession(api.ClientID(leader_election_id1))
 	if err != nil {
 		log.Fatal(err)
 	}
