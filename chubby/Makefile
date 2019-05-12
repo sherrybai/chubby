@@ -1,5 +1,4 @@
 all: chubby simple_client client_fast_reqs test_client over_load_client
-all: chubby simple_client test_client
 
 chubby:
 	go build -o chubby cmd/main.go
