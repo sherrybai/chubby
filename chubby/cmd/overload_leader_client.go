@@ -31,6 +31,8 @@ func acquire_release(clientID string, sess *client.ClientSession) {
 			ok, err := sess.TryAcquireLock(api.FilePath(lockNames[j]), api.EXCLUSIVE)
 			if !ok {
 				log.Println("Failed to acquire lock. Continuing.")
+			} else {
+				log.Println("Successfully acquired lock")
 			}
 			if err != nil {
 				log.Fatal(err)
@@ -40,6 +42,8 @@ func acquire_release(clientID string, sess *client.ClientSession) {
 			if err != nil {
 				log.Printf("Release failed with error: %s\n", err.Error())
 				continue
+			} else {
+				log.Println("Successfully released lock")
 			}
 		}
 	}
