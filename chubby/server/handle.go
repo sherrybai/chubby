@@ -151,3 +151,32 @@ func (h *Handler) ReleaseLock(req api.ReleaseLockRequest, res *api.ReleaseLockRe
 	}
 	return nil
 }
+
+// Read Content
+func (h *Handler) ReadContent(req api.ReadRequest, res *api.ReadResponse) error {
+	sess, ok := app.sessions[req.ClientID]
+	if !ok {
+		return errors.New(fmt.Sprintf("No session exists for %s", req.ClientID))
+	}
+	content, err := sess.ReadContent(req.Filepath)
+	if err != nil {
+		return err
+	}
+	res.Content = content
+	return  nil
+}
+
+// Read Content
+func (h *Handler) WriteContent(req api.WriteRequest, res *api.WriteResponse) error {
+	sess, ok := app.sessions[req.ClientID]
+	if !ok {
+		return errors.New(fmt.Sprintf("No session exists for %s", req.ClientID))
+	}
+	err := sess.WriteContent (req.Filepath, req.Content)
+	if err != nil {
+		res.IsSuccessful = false
+		return  err
+	}
+	res.IsSuccessful = true
+	return nil
+}

@@ -78,3 +78,22 @@ type ReleaseLockRequest struct {
 type ReleaseLockResponse struct {
 
 }
+
+type ReadRequest struct {
+	ClientID ClientID
+	Filepath FilePath
+}
+
+type ReadResponse struct {
+	Content string
+}
+
+type WriteRequest struct {
+	ClientID ClientID
+	Filepath FilePath
+	Content string
+}
+
+type WriteResponse struct {
+	IsSuccessful bool
+}

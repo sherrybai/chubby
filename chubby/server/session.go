@@ -4,6 +4,7 @@
 package server
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -48,6 +49,7 @@ type Lock struct {
 	path			api.FilePath  // The path to this lock in the store.
 	mode			api.LockMode  // api.SHARED or exclusive lock?
 	owners			map[api.ClientID]bool  // Who is holding the lock?
+	content         string                 // The content of the file
 }
 
 /* Create Session struct. */
@@ -170,6 +172,7 @@ func (sess *Session) OpenLock(path api.FilePath) error {
 			path: path,
 			mode: api.FREE,
 			owners: make(map[api.ClientID]bool),
+			content: "",
 		}
 		app.locks[path] = lock
 		sess.locks[path] = lock
@@ -241,6 +244,7 @@ func (sess *Session) TryAcquireLock (path api.FilePath, mode api.LockMode) (bool
 			path: path,
 			mode: api.FREE,
 			owners: make(map[api.ClientID]bool),
+			content: "",
 		}
 		app.locks[path] = lock
 		sess.locks[path] = lock
@@ -368,3 +372,71 @@ func (sess *Session) ReleaseLock (path api.FilePath) (error) {
 		return errors.New(fmt.Sprintf("Lock at %s has undefined mode %d", path, lock.mode))
 	}
 }
+
+// Read the Content from a lockfile
+func (sess *Session) ReadContent (path api.FilePath) (string,error) {
+	// Check if file exists in persistent store
+	content, err := app.store.Get(string(path))
+
+	if err != nil {
+		return "",errors.New(fmt.Sprintf("Client with id %s: File at %s does not exist in persistent store", path, sess.clientID))
+	}
+
+	// Grab lock struct from session locks map.
+	lock, present := app.locks[path]
+
+	// If not in session locks map, throw an error
+	if !present || lock == nil {
+		return "",errors.New(fmt.Sprintf("Lock at %s does not exist in session locks map", path))
+	}
+
+	// Check that we are among the owners of the lock.
+	_, present = lock.owners[sess.clientID]
+	if !present || !lock.owners[sess.clientID] {
+		return "",errors.New(fmt.Sprintf("Client %d does not own lock at path %s", sess.clientID, path))
+	}
+	lockNew := &Lock{
+		path: path,
+		mode: api.FREE,
+		owners: make(map[api.ClientID]bool),
+		content: "",
+	}
+	contentByte := []byte(content)
+	err = json.Unmarshal(contentByte, lockNew)
+	if err != nil {
+		return "",errors.New(fmt.Sprintf("Unmarshaling Error"))
+	}
+	return lockNew.content, nil
+}
+
+// Write the Content to a lockfile
+func (sess *Session) WriteContent (path api.FilePath, content string) (error) {
+	// Check if file exists in persistent store
+	_, err := app.store.Get(string(path))
+
+	if err != nil {
+		return errors.New(fmt.Sprintf("Client with id %s: File at %s does not exist in persistent store", path, sess.clientID))
+	}
+
+	// Grab lock struct from session locks map.
+	lock, present := app.locks[path]
+
+	// If not in session locks map, throw an error
+	if !present || lock == nil {
+		return errors.New(fmt.Sprintf("Lock at %s does not exist in session locks map", path))
+	}
+
+	// Check that we are among the owners of the lock.
+	_, present = lock.owners[sess.clientID]
+	if !present || !lock.owners[sess.clientID] {
+		return errors.New(fmt.Sprintf("Client %d does not own lock at path %s", sess.clientID, path))
+	}
+	lock.content = content
+	out, err := json.Marshal(lock)
+	err = app.store.Set(string(path), string(out))
+	if err != nil {
+		return errors.New(fmt.Sprintf("Marshaling Error"))
+	}
+	return nil
+}
+

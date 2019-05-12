@@ -402,6 +402,66 @@ func (sess *ClientSession) ReleaseLock(filePath api.FilePath) error {
 	return err
 }
 
+func (sess *ClientSession) ReadContent(filePath api.FilePath) (string,error) {
+	if sess.jeopardyFlag {
+		durationJeopardyOver := time.Until(sess.startTime.Add(sess.leaseLength + JeopardyDuration))
+		select {
+		case <-sess.jeopardyChan:
+			sess.logger.Printf("session with %s reestablished", sess.serverAddr)
+		case <-time.After(durationJeopardyOver):
+			return "", errors.New(fmt.Sprintf("session with %s expired", sess.serverAddr))
+		}
+	}
+	_, ok := sess.locks[filePath]
+	if !ok {
+		return "", errors.New(fmt.Sprintf("Client does not own the lock %s", filePath))
+	}
+
+	//sess.logger.Printf("Sending ReleaseLock request to server %s", sess.serverAddr)
+	req := api.ReadRequest{ClientID: sess.clientID, Filepath: filePath}
+	resp := &api.ReadResponse{}
+
+	var err error
+	for {  // If we get a connection problem, keep trying.
+		err = sess.rpcClient.Call("Handler.ReadContent", req, resp)
+		if err != io.ErrUnexpectedEOF {
+			break
+		}
+	}
+
+	return resp.Content, err
+}
+
+func (sess *ClientSession) WriteContent(filePath api.FilePath, content string) (bool,error) {
+	if sess.jeopardyFlag {
+		durationJeopardyOver := time.Until(sess.startTime.Add(sess.leaseLength + JeopardyDuration))
+		select {
+		case <-sess.jeopardyChan:
+			sess.logger.Printf("session with %s reestablished", sess.serverAddr)
+		case <-time.After(durationJeopardyOver):
+			return false, errors.New(fmt.Sprintf("session with %s expired", sess.serverAddr))
+		}
+	}
+	_, ok := sess.locks[filePath]
+	if !ok {
+		return false, errors.New(fmt.Sprintf("Client does not own the lock %s", filePath))
+	}
+
+	//sess.logger.Printf("Sending ReleaseLock request to server %s", sess.serverAddr)
+	req := api.WriteRequest{ClientID: sess.clientID, Filepath: filePath, Content: content}
+	resp := &api.WriteResponse{}
+
+	var err error
+	for {  // If we get a connection problem, keep trying.
+		err = sess.rpcClient.Call("Handler.WriteContent", req, resp)
+		if err != io.ErrUnexpectedEOF {
+			break
+		}
+	}
+
+	return resp.IsSuccessful, err
+}
+
 func (sess *ClientSession) IsExpired() bool {
 	return sess.expired
 }
