@@ -47,9 +47,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = sess.ReleaseLock("Lock/Lock1")
+	content, err := sess.ReadContent("Lock/Lock1")
 	if err != nil {
 		log.Fatal(err)
+	} else {
+		fmt.Println(content)
 	}
 	quitCh <- os.Kill
 	select {
