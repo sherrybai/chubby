@@ -315,7 +315,7 @@ func (sess *Session) ReleaseLock (path api.FilePath) (error) {
 	}
 
 	// Grab lock struct from session locks map.
-	lock, present := sess.locks[path]
+	lock, present := app.locks[path]
 
 	// If not in session locks map, throw an error
 	if !present || lock == nil {
