@@ -395,18 +395,8 @@ func (sess *Session) ReadContent (path api.FilePath) (string,error) {
 	if !present || !lock.owners[sess.clientID] {
 		return "",errors.New(fmt.Sprintf("Client %d does not own lock at path %s", sess.clientID, path))
 	}
-	lockNew := &Lock{
-		path: path,
-		mode: api.FREE,
-		owners: make(map[api.ClientID]bool),
-		content: "",
-	}
-	contentByte := []byte(content)
-	err = json.Unmarshal(contentByte, lockNew)
-	if err != nil {
-		return "",errors.New(fmt.Sprintf("Unmarshaling Error"))
-	}
-	return lockNew.content, nil
+
+	return content, nil
 }
 
 // Write the Content to a lockfile
@@ -431,11 +421,10 @@ func (sess *Session) WriteContent (path api.FilePath, content string) (error) {
 	if !present || !lock.owners[sess.clientID] {
 		return errors.New(fmt.Sprintf("Client %d does not own lock at path %s", sess.clientID, path))
 	}
-	lock.content = content
-	out, err := json.Marshal(lock)
-	err = app.store.Set(string(path), string(out))
+
+	err = app.store.Set(string(path), content)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Marshaling Error"))
+		return errors.New(fmt.Sprintf("Write Error"))
 	}
 	return nil
 }
