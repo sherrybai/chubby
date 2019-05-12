@@ -51,24 +51,24 @@ func main () {
 	quitCh := make(chan os.Signal, 1)
 	signal.Notify(quitCh, os.Kill, os.Interrupt, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 1000; i++ {
 		clientIDs = append(clientIDs, fmt.Sprintf("client_%d",i))
 	}
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 1000; i++ {
 		sess,err := client.InitSession(api.ClientID(clientIDs[i]))
 		if err != nil {
 			log.Fatal(err)
 		}
 		sessions = append(sessions, sess)
 	}
-	for i :=0; i < 99; i++ {
+	for i :=0; i < 999; i++ {
 		go acquire_release(clientIDs[i], sessions[i])
 	}
 
 	var lockNames []string
 	for i := 0; i < 100; i++ {
 		lockName := fmt.Sprintf("lock_%d_%s",i, string(clientIDs[99]))
-		err := sessions[99].OpenLock(api.FilePath(lockName))
+		err := sessions[999].OpenLock(api.FilePath(lockName))
 		if err != nil {
 			fmt.Println("Failed to open lock. Exiting.")
 		}
@@ -85,14 +85,14 @@ func main () {
 
 	for i := 0; i < 1000000; i++ {
 		for j := 0; j < 100; j++ {
-			ok, err := sessions[99].TryAcquireLock(api.FilePath(lockNames[j]), api.EXCLUSIVE)
+			ok, err := sessions[999].TryAcquireLock(api.FilePath(lockNames[j]), api.EXCLUSIVE)
 			if !ok {
 				log.Println("Failed to acquire lock. Continuing.")
 			}
 			if err != nil {
 				log.Fatal(err)
 			}
-			err = sessions[99].ReleaseLock(api.FilePath(lockNames[j]))
+			err = sessions[999].ReleaseLock(api.FilePath(lockNames[j]))
 
 			if err != nil {
 				log.Printf("Release failed with error: %s\n", err.Error())
