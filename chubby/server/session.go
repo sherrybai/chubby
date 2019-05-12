@@ -269,7 +269,7 @@ func (sess *Session) TryAcquireLock (path api.FilePath, mode api.LockMode) (bool
 
 			// Add lock to session lock struct
 			sess.locks[path] = lock
-
+			app.locks[path] = lock
 			// Return success
 			//app.logger.Printf("Lock %s acquired successfully with mode SHARED", path)
 			return true, nil
