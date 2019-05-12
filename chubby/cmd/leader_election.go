@@ -52,6 +52,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println("Done Releasing Lock")
 	// Exit on signal.
 	<-quitCh
 }
