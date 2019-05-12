@@ -1,4 +1,4 @@
-all: chubby simple_client client_fast_reqs test_client
+all: chubby simple_client client_fast_reqs test_client over_load_client
 all: chubby simple_client test_client
 
 chubby:
@@ -9,6 +9,9 @@ simple_client:
 
 client_fast_reqs:
 	go build -o client_fast_reqs cmd/client_fast_reqs.go
+
+over_load_client:
+    go build -o over_load_client cmd/overload_leader_client.go
 
 clean:
 	rm chubby simple_client client_fast_reqs test_client
