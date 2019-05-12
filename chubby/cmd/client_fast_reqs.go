@@ -53,7 +53,7 @@ func main() {
 	counter := 0
 	go func(count *int) {
 		for  range time.Tick(time.Second) {
-			fmt.Printf("We have performed %d operations in the last second", *count)
+			fmt.Printf("We have performed %d operations in the last second\n", *count)
 			*count = 0
 		}
 	}(&counter)
