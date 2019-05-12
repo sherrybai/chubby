@@ -215,7 +215,7 @@ func (sess *Session) TryAcquireLock (path api.FilePath, mode api.LockMode) (bool
 	}
 
 	// Do we already own the lock? Fail with error
-	_, owned := sess.locks[path]
+	_, owned := app.locks[path]
 	if owned {
 		return false, errors.New(fmt.Sprintf("We already own the lock at %s", path))
 	}
