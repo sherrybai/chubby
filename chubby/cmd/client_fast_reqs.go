@@ -72,11 +72,11 @@ func main() {
 					}
 				}
 				log.Printf("TryAcquire failed with error: %s\n", err.Error())
-				//continue
+				continue
 			}
 			if !ok {
 				log.Println("Failed to acquire lock. Continuing.")
-				//continue
+				continue
 			}
 
 			startTime = time.Now()
