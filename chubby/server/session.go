@@ -7,6 +7,7 @@ import (
 	"cos518project/chubby/api"
 	"errors"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 )
@@ -349,7 +350,7 @@ func (sess *Session) ReleaseLock (path api.FilePath) (error) {
 		// Delete lock from session locks map
 		delete(sess.locks, path)
 		app.locks[path] = lock
-
+		log.Printf("Release lock at %s\n", path)
 		// Return without error
 		return nil
 	case api.SHARED:
