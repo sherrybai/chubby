@@ -48,30 +48,34 @@ services:
             static-network:
                 ipv4_address: 172.20.128.5
 
-    client1:
-        build:
-            context: .
-            dockerfile: Dockerfile.leader_client
-        restart: on-failure
-        depends_on:
-            - "node1"
-            - "node2"
-            - "node3"
-            - "node4"
-            - "node5"
-        networks:
-            static-network:
-                ipv4_address: 172.20.192.1
-    client2:
-        build:
-            context: .
-            dockerfile: Dockerfile.acquire_leader
-        restart: on-failure
-        depends_on:
-            - "client1"
-        networks:
-            static-network:
-                ipv4_address: 172.20.193.1
+##################################################################
+# Client docker containers: uncomment to build with server nodes #
+##################################################################
+#     client1:
+#         build:
+#             context: .
+#             dockerfile: Dockerfile.leader_client
+#         restart: on-failure
+#         depends_on:
+#             - "node1"
+#             - "node2"
+#             - "node3"
+#             - "node4"
+#             - "node5"
+#         networks:
+#             static-network:
+#                 ipv4_address: 172.20.192.1
+#     client2:
+#         build:
+#             context: .
+#             dockerfile: Dockerfile.acquire_leader
+#         restart: on-failure
+#         depends_on:
+#             - "client1"
+#         networks:
+#             static-network:
+#                 ipv4_address: 172.20.193.1
+
 networks:
     static-network:
         ipam:
