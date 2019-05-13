@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 )
 
 var leader_election_id1		string		// ID of this client.
@@ -53,20 +52,14 @@ func main() {
 	} else {
 		fmt.Printf("Read Content is %s\n",content)
 	}
-	<-time.After(15 * time.Second)
-	quitCh <- os.Kill
-	select {
-	case <- quitCh:
-		return
-	case <-  time.After(55 * time.Second):
-		err = sess.ReleaseLock("Lock/Lock1")
-		if err != nil {
-			log.Fatal(err)
+	for {
+		// Exit on signal.
+		select {
+		case <- quitCh:
+			break
+		default:
+			continue
 		}
-		fmt.Println("Done Releasing Lock")
 	}
-
-	// Exit on signal.
-	<-quitCh
 }
 
