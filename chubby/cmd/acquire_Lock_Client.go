@@ -36,9 +36,6 @@ func main() {
 	startTime := time.Now()
 	for {
 		isSuccessful, err := sess.TryAcquireLock("Lock/Lock1", api.EXCLUSIVE)
-		if !isSuccessful {
-			fmt.Printf("Lock Failure")
-		}
 		if err != nil {
 			log.Println(err)
 		}
