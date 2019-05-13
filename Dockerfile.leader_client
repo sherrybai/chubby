@@ -7,7 +7,7 @@ COPY . .
 RUN go get -d -v ./...
 
 # Build executable
-RUN go build -o bin/simple_client chubby/cmd/simple_client.go
+RUN go build -o chubby/leader_election_client1 chubby/cmd/leader_election.go
 
 # Run simple_client exec
-CMD ["bin/simple_client"]
+CMD ["chubby/leader_election_client1"]

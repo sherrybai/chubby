@@ -22,4 +22,4 @@ leader_election_client1:
 	go build -o leader_election_client1 cmd/leader_election.go
 
 acquire_lock_client:
-    go build -o acquire_lock_client cmd/acquire_Lock_Client.go
+	go build -o acquire_lock_client cmd/acquire_Lock_Client.go

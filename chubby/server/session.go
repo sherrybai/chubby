@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const DefaultLeaseExt = 12 * time.Second
+const DefaultLeaseExt = 15 * time.Second
 
 // Session contains metadata for one Chubby session.
 // For simplicity, we say that each client can only init one session with

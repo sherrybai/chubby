@@ -24,7 +24,7 @@ func main() {
 
 	quitCh := make(chan os.Signal, 1)
 	signal.Notify(quitCh, os.Kill, os.Interrupt, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-
+	time.Sleep(5*time.Second)
 	sess, err := client.InitSession(api.ClientID(acquireLock_clientID))
 	if err != nil {
 		log.Fatal(err)
@@ -47,7 +47,17 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			break
+			content, err := sess.ReadContent("Lock/Lock1")
+		        if err != nil {
+                		log.Fatal(err)
+       			} else {
+                		fmt.Printf("Read Content is %s\n",content)
+                        }
+        		if content == acquireLock_clientID {
+                		elapsed := time.Since(startTime)
+                		log.Printf("Successfully acquired lock after %s\n",elapsed)
+        		}
+			return
 		}
 	}
 
@@ -59,7 +69,7 @@ func main() {
 	}
 	if content == acquireLock_clientID {
 		elapsed := time.Since(startTime)
-		fmt.Printf("Successfully acquired lock after %s\n",elapsed)
+		log.Printf("Successfully acquired lock after %s\n",elapsed)
 	}
 
 	// Exit on signal.
