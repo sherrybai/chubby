@@ -53,6 +53,7 @@ func main() {
 	} else {
 		fmt.Printf("Read Content is %s\n",content)
 	}
+	time.After(55 * time.Second)
 	quitCh <- os.Kill
 	select {
 	case <- quitCh:
