@@ -1,5 +1,5 @@
 # Chubby
-Project for COS 518: A (very simplified) implementation of [Chubby](https://static.googleusercontent.com/media/research.google.com/en//archive/chubby-osdi06.pdf), Google's distributed lock service.
+A (very simplified) implementation of [Chubby](https://static.googleusercontent.com/media/research.google.com/en//archive/chubby-osdi06.pdf), Google's distributed lock service, written for [COS 518, Spring 2019](http://www.cs.princeton.edu/courses/archive/spr19/cos518/index.html).
 
 ## Instructions
 To bring up five Chubby nodes in individual Docker containers, run `docker-compose up`. Superuser privileges may be required.
