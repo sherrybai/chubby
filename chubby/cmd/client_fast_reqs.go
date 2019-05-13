@@ -90,7 +90,7 @@ func main() {
 				log.Println("Failed to acquire lock. Continuing.")
 				//continue
 			}
-
+			counter += 1
 			//startTime = time.Now()
 			err = sess.ReleaseLock(lockName)
 			//timeTrack(startTime, "Release")
