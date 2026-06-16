@@ -1,0 +1,103 @@
+services:
+  chubby-cluster:
+    name: Chubby cluster
+    description: Runs three local Chubby nodes for development.
+    triggeredBy:
+      - manual
+      - postEnvironmentStart
+    commands:
+      start: |
+        set -e
+        gitpod environment port open 5379 --dont-wait --admission creator_only --name chubby-cluster || true
+
+        module_dir=/tmp/cos518project
+        bin_dir=/tmp/chubby-bin
+        rm -rf "$module_dir"
+        mkdir -p "$module_dir" "$bin_dir" /tmp/chubby-node1 /tmp/chubby-node2 /tmp/chubby-node3
+        cp -a "$PWD/chubby" "$module_dir/chubby"
+        cat > "$module_dir/go.mod" <<'EOF'
+        module cos518project
+
+        go 1.17
+
+        require (
+        	github.com/hashicorp/raft v1.1.2
+        	github.com/hashicorp/raft-boltdb v0.0.0-20190207182443-d5cf5e607be9
+        )
+        EOF
+
+        cd "$module_dir"
+        go mod tidy
+        go build -o "$bin_dir/chubby" ./chubby/cmd/main.go
+
+        "$bin_dir/chubby" -id "node1" -raftdir /tmp/chubby-node1 -listen "0.0.0.0:5379" -raftbind "127.0.0.1:15379" &
+        node1_pid=$!
+        sleep 2
+        "$bin_dir/chubby" -id "node2" -raftdir /tmp/chubby-node2 -listen "0.0.0.0:6379" -raftbind "127.0.0.1:16379" -join "127.0.0.1:5379" &
+        node2_pid=$!
+        "$bin_dir/chubby" -id "node3" -raftdir /tmp/chubby-node3 -listen "0.0.0.0:7379" -raftbind "127.0.0.1:17379" -join "127.0.0.1:5379" &
+        node3_pid=$!
+
+        trap 'kill "$node1_pid" "$node2_pid" "$node3_pid" 2>/dev/null || true' TERM INT EXIT
+        wait "$node1_pid" "$node2_pid" "$node3_pid"
+      ready: bash -lc '</dev/tcp/localhost/5379'
+      stop: pkill -f /tmp/chubby-bin/chubby || true
+
+tasks:
+  install-dependencies:
+    name: Install dependencies
+    description: Pins and downloads the legacy Go dependency graph into the module cache.
+    triggeredBy:
+      - manual
+      - postDevcontainerStart
+      - prebuild
+    prebuildRequiresSuccess: true
+    command: |
+      set -e
+      module_dir=/tmp/cos518project
+      rm -rf "$module_dir"
+      mkdir -p "$module_dir"
+      cp -a "$PWD/chubby" "$module_dir/chubby"
+      cat > "$module_dir/go.mod" <<'EOF'
+      module cos518project
+
+      go 1.17
+
+      require (
+      	github.com/hashicorp/raft v1.1.2
+      	github.com/hashicorp/raft-boltdb v0.0.0-20190207182443-d5cf5e607be9
+      )
+      EOF
+
+      cd "$module_dir"
+      go mod tidy
+      go mod download
+
+  build:
+    name: Build
+    description: Compiles the Chubby server and example clients.
+    triggeredBy:
+      - manual
+    dependsOn:
+      - install-dependencies
+    command: |
+      set -e
+      module_dir=/tmp/cos518project
+      rm -rf "$module_dir"
+      mkdir -p "$module_dir"
+      cp -a "$PWD/chubby" "$module_dir/chubby"
+      cat > "$module_dir/go.mod" <<'EOF'
+      module cos518project
+
+      go 1.17
+
+      require (
+      	github.com/hashicorp/raft v1.1.2
+      	github.com/hashicorp/raft-boltdb v0.0.0-20190207182443-d5cf5e607be9
+      )
+      EOF
+
+      cd "$module_dir"
+      go mod tidy
+      cd chubby
+      make all

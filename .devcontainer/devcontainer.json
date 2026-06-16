@@ -1,0 +1,12 @@
+{
+  "name": "Chubby",
+  "image": "mcr.microsoft.com/devcontainers/go:1.24",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker": {
+      "moby": false
+    }
+  },
+  "containerEnv": {
+    "GOPATH": "/go"
+  }
+}
